@@ -1,3 +1,8 @@
+import beans.Product;
+import beans.User;
+import dao.ProductDAO;
+import dao.UserDAO;
+
 import java.io.*;
 import java.util.HashMap;
 
@@ -5,24 +10,132 @@ public class Client {
     private BufferedReader inKeyboard;
     private PrintWriter outVideo;
 
-    //connection with the database???
-    //private static Database database = new Database();
-
     public Client() {
 
+        //Setting of the variables for IO operations
         prepareIO();
 
+        outVideo.println("Welcome to E-SHOP!");
+
+        //Authentication of the user
+        User user = authenticate();
+
+        //Real execution of the application
+        execute(user);
+    }
+
+    private void prepareIO() {
+        inKeyboard = new BufferedReader(new InputStreamReader(System.in));
+        outVideo = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)), true);
+    }
+
+    private User authenticate() {
+        outVideo.println("Have you already been here? --> press 1 to login");
+        outVideo.println("Are you new? --> press 2 to register");
+
+        String authType = null;
+
+        User u = null;
+
+        while (authType == null) {
+            try {
+                authType = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            int action = 0;
+            try {
+                action = Integer.parseInt(authType);
+            } catch (NumberFormatException nfe) {
+                authType = null;
+                outVideo.println("You can insert only 1 (login) or 2 (registration)");
+            }
+
+            if (action == 1) {
+                u = login();
+            } else if (action == 2) {
+                u = register();
+            } else {
+                authType = null;
+                outVideo.println("You can insert only 1 (login) or 2 (registration)");
+            }
+        }
+
+        return u;
+    }
+
+    public User login() {
+
+        String username = null;
+        String password = null;
+
+        User u = null;
+
+        while (u == null) {
+            outVideo.println("Username:");
+            try {
+                username = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            outVideo.println("Password:");
+            try {
+                password = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            u = UserDAO.findUserByCredentials(username, password);
+
+            if (u == null) {
+                outVideo.println("Wrong credentials, try again!");
+            }
+        }
+
+        return u;
+    }
+
+    //With the registration only users with type = CUST can be created
+    private User register() {
+        String username = null;
+        String password = null;
+
+        outVideo.println("Insert a username:");
+        try {
+            username = inKeyboard.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        outVideo.println("Insert a password:");
+        try {
+            password = inKeyboard.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        User u = new User(username, password, "CUST");
+        UserDAO.addUser(u);
+
+        return u;
+    }
+
+    private void execute(User user) {
         while (true) {
-            outVideo.println("Welcome " + "user"); //sostituire con nome utente
+            outVideo.println("Hello, " + user.getUsername());
             outVideo.println("What do you want to do?");
             outVideo.println("s --> Search products");
             outVideo.println("o --> Show my orders");
             outVideo.println("c --> Go to cart");
+            outVideo.println("l --> Log out");
             outVideo.println("q --> Quit");
             outVideo.println();
             outVideo.println();
+            outVideo.println("The users that purchaised the same product as you, purchased also the products you can see below.");
+            outVideo.println("Digit the index of one of them to see its details.");
+            outVideo.println();
             outVideo.println("--- Suggested products ---");
-            outVideo.println(); //inserire la tabella con i prodotti e l'indice x selezionarli
+            //inserire la tabella con i prodotti e l'indice x selezionarli
 
 
             try {
@@ -30,14 +143,13 @@ public class Client {
 
                 if (choice.equals("s"))
                     searchProducts();
-                else if (choice.equals("o"))
-                    books();
-                else if (choice.equals("c"))
-                    publishers();
-                else if (choice.equals("q")) {
+                else if (choice.equals("o")) {
+
+                } else if (choice.equals("c")) {
+
+                } else if (choice.equals("q")) {
                     outVideo.println("Goodbye!");
-                    //database.closeDB();   -> CLOSE CONNNECTION
-                    //anche le funzioni x andare al singolo prodotto selezionato
+                    //Close connection to database!!!!
                     break;
                 } else
                     outVideo.println("WRONG INPUT");
@@ -48,11 +160,34 @@ public class Client {
         }
     }
 
-    private void prepareIO() {
+    private void searchProducts() {
 
-        inKeyboard = new BufferedReader(new InputStreamReader(System.in));
-        outVideo = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)), true);
+        outVideo.println("What do you want to search?");
 
+        String research = "";
+        try {
+            research = inKeyboard.readLine();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+
+        HashMap<String, String> results = new HashMap<>();
+
+        results = ProductDAO.findProductsByString(research);
+
+        //Shows all the results of the search
+        int limit = showResults(results);
+
+        //Retrieves the ID of the selected product
+        String id = chooseElement(results, limit);
+
+        if (id != null) {
+            //Retrieves the details of the selected product
+            Product p = ProductDAO.findProductById(id);
+
+            //Prints the details of the selected product
+            outVideo.println(p.toString());
+        }
     }
 
     private int showResults(HashMap<String, String> results) {
@@ -94,46 +229,20 @@ public class Client {
         }
 
         int i = 0;
+        String k = null;
         for (String key : results.keySet()) {
             i++;
             if (i == n) {
-                return key;
+                k = key;
+                break;
             }
         }
-
-        return null;
+        return k;
     }
 
 
-    private void searchProducts() {
 
-        outVideo.println("What do you want to search? ");
-
-        String research = "";
-        try {
-            research = inKeyboard.readLine();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-
-        HashMap<String, String> results = null;
-
-        // results = metodo che cerca la parola nel DB
-
-        //Shows all the results of the search
-        int limit = showResults(results);
-
-        //Retrieve the ID of the selected product
-        String id = chooseElement(results, limit);
-
-        //Product p = new Product();
-        // p = metodo che recupera i dettagli del prodotto scelto;
-
-        //showDetails(p);
-
-    }
-
-    private void authors() {
+    /*private void authors() {
 
         while (true) {
             outVideo.println("What do you want to do?");
@@ -488,13 +597,9 @@ public class Client {
 
         System.out.println("-----------------------------------------------------------------------------");
 
-    }
+    }*/
 
     public static void main(String[] args) {
-
-        database.openDB();
-        database.prepareDatabase();
-
         Client c = new Client();
     }
 
