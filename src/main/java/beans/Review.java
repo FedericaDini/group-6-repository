@@ -9,7 +9,25 @@ public class Review {
     private String text;
     private double rating;
     private boolean doRecommend;
+    private String prodId;
+    private String userId;
     //Do purchase???
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getProdId() {
+        return prodId;
+    }
+
+    public void setProdId(String prodId) {
+        this.prodId = prodId;
+    }
 
     public String getId() {
         return id;
@@ -59,6 +77,12 @@ public class Review {
         this.doRecommend = doRecommend;
     }
 
-    public Review() {
+    public Review(String title, String text, double rating, boolean doRecommend, String prodId, String userId) {
+        this.title = title;
+        this.text = text;
+        this.rating = rating;
+        this.doRecommend = doRecommend;
+        this.prodId = prodId;
+        this.userId = userId;
     }
 }

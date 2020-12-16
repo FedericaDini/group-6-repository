@@ -110,6 +110,18 @@ public class Product {
         this.reviewsList = reviewsList;
     }
 
+    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, int availableItems, double price, String description, ArrayList<Review> reviewsList, double rate) {
+        this.name = name;
+        this.brand = brand;
+        this.mainCategory = mainCategory;
+        this.categories = categories;
+        this.availableItems = availableItems;
+        this.price = price;
+        this.description = description;
+        this.rate = rate;
+        this.reviewsList = reviewsList;
+    }
+
     @Override
     public String toString() {
         String s = "Id: " + getId() + "\n" +

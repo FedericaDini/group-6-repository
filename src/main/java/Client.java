@@ -1,10 +1,16 @@
+import beans.Order;
 import beans.Product;
+import beans.Review;
 import beans.User;
+import dao.OrderDAO;
 import dao.ProductDAO;
+import dao.ReviewDAO;
 import dao.UserDAO;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class Client {
     private BufferedReader inKeyboard;
@@ -17,16 +23,95 @@ public class Client {
 
         outVideo.println("Welcome to E-SHOP!");
 
-        //Authentication of the user
-        User user = authenticate();
-
         //Real execution of the application
-        execute(user);
+        execute();
     }
 
     private void prepareIO() {
         inKeyboard = new BufferedReader(new InputStreamReader(System.in));
         outVideo = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)), true);
+    }
+
+    private void execute() {
+        User user = null;
+        while (true) {
+            if (user != null) {
+                outVideo.println("Hello, " + user.getUsername());
+                outVideo.println("What do you want to do?");
+                if (user.getType().equals("ADMIN")) {
+                    outVideo.println("e --> Add a new employee");
+                    outVideo.println("u --> Search users");
+                }
+                if (user.getType().equals("EMP") || user.getType().equals("ADMIN")) {
+                    outVideo.println("a --> Add a new product");
+                }
+                outVideo.println("s --> Search products");
+                if (user.getType().equals("CUST")) {
+                    outVideo.println("d --> See details about a suggested product");
+                }
+                outVideo.println("o --> Show my orders");
+                outVideo.println("c --> Go to cart");
+                outVideo.println("l --> Log out");
+                outVideo.println("q --> Quit");
+                outVideo.println();
+                outVideo.println();
+
+                outVideo.println("The users that purchaised the same product as you, purchased also the products you can see below.");
+                outVideo.println("--- Suggested products ---");
+
+                //Compute the list of suggested products
+                HashMap<String, String> suggestedProducts = ProductDAO.findSuggestedProductsByUsername(user.getUsername());
+                //Shows all the results of the search
+                int limit = showResults(suggestedProducts);
+
+                try {
+                    String choice = inKeyboard.readLine();
+
+                    if (choice.equals("e") && user.getType().equals("ADMIN")) {
+                        register("EMP");
+                    }
+                    if (choice.equals("u") && user.getType().equals("ADMIN")) {
+                        searchUsers();
+                    }
+                    if (choice.equals("a") && (user.getType().equals("EMP") || user.getType().equals("ADMIN"))) {
+                        addProduct();
+                    } else if (choice.equals("d") && user.getType().equals("CUST")) {
+                        if (limit != 0) {
+                            //Retrieves the ID of the selected product
+                            String id = chooseElement(suggestedProducts, limit);
+
+                            //Retrieves the details of the selected product
+                            Product p = ProductDAO.findProductById(id);
+
+                            //Prints the details of the selected product
+                            outVideo.println(p);
+
+                            manageProduct(p, user);
+                        }
+                    } else if (choice.equals("s")) {
+                        searchProducts(user);
+                    } else if (choice.equals("o")) {
+                        searchOrders(user);
+                    } else if (choice.equals("c")) {
+                        retrieveCart(user);
+                    } else if (choice.equals("l")) {
+                        user = null;
+                    } else if (choice.equals("q")) {
+                        outVideo.println("Goodbye!");
+                        //Close connection to database!!!!
+                        break;
+                    } else
+                        outVideo.println("WRONG INPUT");
+                } catch (Exception e) {
+                    System.out.println("Exception: " + e);
+                    e.printStackTrace();
+                }
+
+            } else {
+                user = authenticate();
+            }
+
+        }
     }
 
     private User authenticate() {
@@ -55,7 +140,8 @@ public class Client {
             if (action == 1) {
                 u = login();
             } else if (action == 2) {
-                u = register();
+                //With the registration only users with type = CUST can be created
+                u = register("CUST");
             } else {
                 authType = null;
                 outVideo.println("You can insert only 1 (login) or 2 (registration)");
@@ -86,27 +172,34 @@ public class Client {
                 e.printStackTrace();
             }
 
-            u = UserDAO.findUserByCredentials(username, password);
+            u = UserDAO.findUserByUsername(username);
 
-            if (u == null) {
+            if (u == null || !password.equals(u.getPassword())) {
                 outVideo.println("Wrong credentials, try again!");
             }
+
         }
 
         return u;
     }
 
-    //With the registration only users with type = CUST can be created
-    private User register() {
+    private User register(String type) {
         String username = null;
         String password = null;
 
-        outVideo.println("Insert a username:");
-        try {
-            username = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
+        boolean unique = false;
+        while (!unique) {
+            outVideo.println("Insert username:");
+            try {
+                username = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (UserDAO.validUser(username)) {
+                unique = true;
+            }
         }
+
         outVideo.println("Insert a password:");
         try {
             password = inKeyboard.readLine();
@@ -114,53 +207,184 @@ public class Client {
             e.printStackTrace();
         }
 
-        User u = new User(username, password, "CUST");
+        User u = new User(username, password, type);
         UserDAO.addUser(u);
 
         return u;
     }
 
-    private void execute(User user) {
-        while (true) {
-            outVideo.println("Hello, " + user.getUsername());
-            outVideo.println("What do you want to do?");
-            outVideo.println("s --> Search products");
-            outVideo.println("o --> Show my orders");
-            outVideo.println("c --> Go to cart");
-            outVideo.println("l --> Log out");
-            outVideo.println("q --> Quit");
-            outVideo.println();
-            outVideo.println();
-            outVideo.println("The users that purchaised the same product as you, purchased also the products you can see below.");
-            outVideo.println("Digit the index of one of them to see its details.");
-            outVideo.println();
-            outVideo.println("--- Suggested products ---");
-            //inserire la tabella con i prodotti e l'indice x selezionarli
+    private void searchUsers() {
+        ArrayList<String> usersIds = UserDAO.findAllUsers();
 
+        Iterator<String> iterator = usersIds.iterator();
+        int i = 0;
+        while (iterator.hasNext()) {
+            i = i++;
+            String s = iterator.next();
+            outVideo.println(i + " " + s);
+        }
 
+        int n = -1;
+        while (n == -1) {
+            outVideo.println("Which element do you want to select?");
+            String choice = " ";
             try {
-                String choice = inKeyboard.readLine();
+                choice = inKeyboard.readLine();
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+            try {
+                n = Integer.parseInt(choice);
 
-                if (choice.equals("s"))
-                    searchProducts();
-                else if (choice.equals("o")) {
+                if (n > i || n < 1) {
+                    n = -1;
+                    outVideo.println("Insert a number between 1 and " + i);
+                }
+            } catch (NumberFormatException nfe) {
+                n = -1;
+                outVideo.println("You must insert a number");
+            }
+        }
 
-                } else if (choice.equals("c")) {
+        User u = UserDAO.findUserByUsername(usersIds.get(n - 1));
 
-                } else if (choice.equals("q")) {
-                    outVideo.println("Goodbye!");
-                    //Close connection to database!!!!
-                    break;
-                } else
-                    outVideo.println("WRONG INPUT");
-            } catch (Exception e) {
-                System.out.println("Exception: " + e);
+        outVideo.println(u);
+
+        manageUser(u);
+    }
+
+    private void manageUser(User u) {
+        outVideo.println("Do you want to delete it? (y/n)");
+        boolean del = false;
+        String d = null;
+        while (d == null) {
+            try {
+                d = inKeyboard.readLine();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
+            if (d.equalsIgnoreCase("y")) {
+                del = true;
+            } else if (!d.equalsIgnoreCase("n")) {
+                d = null;
+                outVideo.println("You can answer only y or n");
+            }
+        }
+
+        if (del) {
+            UserDAO.deleteUser(u);
         }
     }
 
-    private void searchProducts() {
+    private void addProduct() {
+        outVideo.println("Insert name:");
+        String name = null;
+        try {
+            name = inKeyboard.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        outVideo.println("Insert brand:");
+        String brand = null;
+        try {
+            brand = inKeyboard.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        outVideo.println("Insert main category:");
+        String mainCategory = null;
+        try {
+            mainCategory = inKeyboard.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        ArrayList<String> categories = new ArrayList<>();
+
+        String cat = null;
+        outVideo.println("Insert the other categories: (when you have finished insert x)");
+        while (cat == null) {
+            try {
+                cat = inKeyboard.readLine();
+                if (!cat.equalsIgnoreCase("x")) {
+                    categories.add(cat);
+                    cat = null;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        int n = -1;
+        outVideo.println("How many items are available?");
+        while (n == -1) {
+            String number = " ";
+            try {
+                number = inKeyboard.readLine();
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+            try {
+                n = Integer.parseInt(number);
+
+                if (n < 0) {
+                    n = -1;
+                    outVideo.println("Insert a non-negative number");
+                }
+            } catch (NumberFormatException nfe) {
+                n = -1;
+                outVideo.println("You must insert a number");
+            }
+
+            Double price = null;
+            while (price == null) {
+                outVideo.println("Insert the price:");
+                try {
+                    price = Double.parseDouble(inKeyboard.readLine());
+                    if (price < 0) {
+                        price = null;
+                        outVideo.println("Products cannot be free!");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NumberFormatException nfe) {
+                    price = null;
+                    outVideo.println("You must insert a price number");
+                }
+            }
+
+            outVideo.println("Insert the description:");
+            String description = null;
+            try {
+                description = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            Double rate = null;
+            while (rate == null) {
+                outVideo.println("Insert a rate (from 1.0 to 5.0)");
+                try {
+                    rate = Double.parseDouble(inKeyboard.readLine());
+                    if (rate < 1.0 || rate > 5.0) {
+                        rate = null;
+                        outVideo.println("You must insert a rate between 1.0 and 5.0");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NumberFormatException nfe) {
+                    rate = null;
+                    outVideo.println("You must insert a rate between 1.0 and 5.0");
+                }
+            }
+
+            Product product = new Product(name, brand, mainCategory, categories, n, price, description, null, rate);
+            ProductDAO.insertProduct(product);
+            outVideo.println("DONE.");
+        }
+    }
+
+    private void searchProducts(User user) {
 
         outVideo.println("What do you want to search?");
 
@@ -178,15 +402,17 @@ public class Client {
         //Shows all the results of the search
         int limit = showResults(results);
 
-        //Retrieves the ID of the selected product
-        String id = chooseElement(results, limit);
+        if (limit != 0) {
+            //Retrieves the ID of the selected product
+            String id = chooseElement(results, limit);
 
-        if (id != null) {
             //Retrieves the details of the selected product
             Product p = ProductDAO.findProductById(id);
 
             //Prints the details of the selected product
-            outVideo.println(p.toString());
+            outVideo.println(p);
+
+            manageProduct(p, user);
         }
     }
 
@@ -209,7 +435,7 @@ public class Client {
     private String chooseElement(HashMap<String, String> results, int limit) {
         int n = -1;
         while (n == -1) {
-            outVideo.println("Which product do you want to select?");
+            outVideo.println("Which element do you want to select?");
             String choice = " ";
             try {
                 choice = inKeyboard.readLine();
@@ -220,6 +446,7 @@ public class Client {
                 n = Integer.parseInt(choice);
 
                 if (n > limit || n < 1) {
+                    n = -1;
                     outVideo.println("Insert a number between 1 and " + limit);
                 }
             } catch (NumberFormatException nfe) {
@@ -240,127 +467,33 @@ public class Client {
         return k;
     }
 
+    private void manageProduct(Product p, User u) {
+        outVideo.println("What do you want to do now?");
+        outVideo.println("a --> Add the product to my cart");
+        outVideo.println("r --> Add a review for the product");
 
+        if (u.getType().equals("EMP")) {
+            outVideo.println("m --> Modify the quantity of the product");
+            outVideo.println("d --> Delete the product");
+        }
 
-    /*private void authors() {
+        outVideo.println("b --> Go back to the main menu");
 
-        while (true) {
-            outVideo.println("What do you want to do?");
-            outVideo.println("1. Add a new author");
-            outVideo.println("2. Delete an author");
-            outVideo.println("3. Read list of authors");
-            outVideo.println("4. Go back");
-
-            String choice = "";
-
+        String choice = null;
+        while (choice == null) {
             try {
                 choice = inKeyboard.readLine();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-
-            if (choice.equals("1")) {
-                addAuthor();
-                break;
-            } else if (choice.equals("2")) {
-                deleteAuthor();
-                break;
-            } else if (choice.equals("3")) {
-                showAuthorsList();
-            } else if (choice.equals("4"))
-                break;
-            else
-                outVideo.println("WRONG INPUT");
-        }
-    }
-
-    private void addAuthor() {
-        try {
-            outVideo.println("Firstname:");
-            String firstname = inKeyboard.readLine();
-
-            outVideo.println("Lastname:");
-            String lastname = inKeyboard.readLine();
-
-            outVideo.println("Biography:");
-            String biography = inKeyboard.readLine();
-
-            AuthorKV.insertAuthor(database, firstname, lastname, biography);
-
-        } catch (Exception e) {
-            System.out.println("Exception: " + e);
-            e.printStackTrace();
-        }
-    }
-
-    private void deleteAuthor() {
-
-        int id = -1;
-        showAuthorsList();
-        while (id == -1) {
-            outVideo.println("Which author do you want to delete?");
-            String choice = " ";
-            try {
-                choice = inKeyboard.readLine();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-            try {
-                id = Integer.parseInt(choice);
-            } catch (NumberFormatException nfe) {
-                id = -1;
-                outVideo.println("The ID must be a number");
-            }
-        }
-
-        AuthorKV.deleteAuthor(database, id);
-    }
-
-    private void showAuthorsList() {
-        List<AuthorBean> list = AuthorKV.getAuthorsList(database);
-        System.out.println("-----------------------------------------------------------------------------");
-        System.out.printf("%10s %20s %20s %20s", "AUTHOR ID", "FIRST NAME", "LAST NAME", "BIOGRAPHY");
-        System.out.println();
-        System.out.println("-----------------------------------------------------------------------------");
-        Iterator<AuthorBean> it = list.iterator();
-        while (it.hasNext()) {
-            AuthorBean a = (AuthorBean) it.next();
-            System.out.format("%10d %20s %20s %20s", a.getId(), a.getFirstname(), a.getLastname(), a.getBiography());
-            System.out.println();
-        }
-
-        System.out.println("-----------------------------------------------------------------------------");
-
-    }
-
-    private void books() {
-
-        while (true) {
-            outVideo.println("What do you want to do?");
-            outVideo.println("1. Add a new book");
-            outVideo.println("2. Delete a book");
-            outVideo.println("3. Modify the quantity of a book");
-            outVideo.println("4. Read list of books");
-            outVideo.println("5. Go back");
-
-            try {
-                String choice = inKeyboard.readLine();
-
-                if (choice.equals("1")) {
-                    addBook();
-                    break;
-                } else if (choice.equals("2")) {
-                    deleteBook();
-                    break;
-                } else if (choice.equals("3")) {
-                    updateBook();
-                    break;
-                } else if (choice.equals("4")) {
-                    showBooksList();
-                } else if (choice.equals("5"))
-                    break;
-                else
+                if (choice.equals("a")) {
+                    ProductDAO.insertProductToCart(p, u);
+                } else if (choice.equals("r")) {
+                    addReview(p, u);
+                } else if (u.getType().equals("EMP") && choice.equals("m")) {
+                    modifyQuantity(p);
+                } else if (u.getType().equals("EMP") && choice.equals("d")) {
+                    ProductDAO.deleteProduct(p);
+                } else if (!choice.equals("b")) {
                     outVideo.println("WRONG INPUT");
+                }
             } catch (Exception e) {
                 System.out.println("Exception: " + e);
                 e.printStackTrace();
@@ -368,239 +501,251 @@ public class Client {
         }
     }
 
-    private void addBook() {
+    private void addReview(Product p, User u) {
+        outVideo.println("Insert title:");
+        String title = null;
         try {
-            outVideo.println("Title:");
-            String title = inKeyboard.readLine();
-            BookKV.getBooksList(database);
-
-            AuthorKV.getAuthorsList(database);
-            outVideo.println("Author ID:");
-            int authorID = Integer.parseInt(inKeyboard.readLine());
-
-            outVideo.println("Price:");
-            float price = Float.parseFloat(inKeyboard.readLine());
-
-            outVideo.println("Category:");
-            String category = inKeyboard.readLine();
-
-            outVideo.println("Publication year:");
-            int pubYear = Integer.parseInt(inKeyboard.readLine());
-
-            outVideo.println("Number of pages:");
-            int numOfPages = Integer.parseInt(inKeyboard.readLine());
-
-            PublisherKV.getPublishersList(database);
-            outVideo.println("Publisher ID:");
-            int publisher = Integer.parseInt(inKeyboard.readLine());
-
-            outVideo.println("Quantity:");
-            int quantity = Integer.parseInt(inKeyboard.readLine());
-
-            BookKV.insertBook(database, title, price, category, pubYear, numOfPages, authorID, publisher, quantity);
+            title = inKeyboard.readLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private void deleteBook() {
-
-        int id = -1;
-        showBooksList();
-        while (id == -1) {
-            outVideo.println("Which book do you want to delete?");
-            String choice = " ";
-            try {
-                choice = inKeyboard.readLine();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-            try {
-                id = Integer.parseInt(choice);
-            } catch (NumberFormatException nfe) {
-                id = -1;
-                outVideo.println("The ID must be a number");
-            }
-        }
-
-        BookKV.deleteBook(database, id);
-    }
-
-    private void updateBook() {
+        outVideo.println("Insert text:");
+        String text = null;
         try {
-            showBooksList();
-            int id = -1;
-
-            while (id == -1) {
-                outVideo.println("Which book do you want to update?");
-                String choice = " ";
-                try {
-                    choice = inKeyboard.readLine();
-                } catch (IOException ioe) {
-                    ioe.printStackTrace();
-                }
-                try {
-                    id = Integer.parseInt(choice);
-                } catch (NumberFormatException nfe) {
-                    id = -1;
-                    outVideo.println("The ID must be a number");
-                }
-            }
-
-            outVideo.println("What do you want to do? (i --> increase d --> decrease n --> insert a new value)");
-
-            String choice = inKeyboard.readLine();
-
-            if (choice.equals("i"))
-                BookKV.increaseQuantity(database, id);
-            else if (choice.equals("d"))
-                BookKV.decreaseQuantity(database, id);
-            else if (choice.equals("n")) {
-
-                int v = -1;
-
-                while (v == -1) {
-                    outVideo.println("What is the new value?");
-                    String c = " ";
-                    try {
-                        c = inKeyboard.readLine();
-                    } catch (IOException ioe) {
-                        ioe.printStackTrace();
-                    }
-                    try {
-                        v = Integer.parseInt(c);
-                    } catch (NumberFormatException nfe) {
-                        v = -1;
-                        outVideo.println("Insert a number");
-                    }
-                }
-
-                BookKV.updateQuantity(database, id, v);
-            } else
-                outVideo.println("Only these three operation are allowed.");
-
-        } catch (Exception e) {
-            System.out.println("Exception: " + e);
+            text = inKeyboard.readLine();
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private void showBooksList() {
-        List<BookBean> list = BookKV.getBooksList(database);
-        System.out.println(
-                "---------------------------------------------------------------------------------------------------------------------------------------------------------------");
-        System.out.printf("\t%-10s%-45s%-25s%-15s%-15s%-20s%-15s%s", "BOOK ID", "TITLE", "AUTHOR", "CATEGORY",
-                "PUBL YEAR", "PUBLISHER", "QUANTITY", "PRICE    ");
-        System.out.println();
-        System.out.println(
-                "---------------------------------------------------------------------------------------------------------------------------------------------------------------");
-        Iterator<BookBean> it = list.iterator();
-        while (it.hasNext()) {
-            BookBean b = (BookBean) it.next();
-            System.out.format("\t%-10d%-45s%-25d%-15s%-15d%-20d%-15d%.2f", b.getId(), b.getTitle(), b.getAuthor(),
-                    b.getCategory(), b.getPublicationYear(), b.getPublisherId(), b.getQuantity(), b.getPrice());
-
-            System.out.println();
+        Double rate = null;
+        while (rate == null) {
+            outVideo.println("Insert a rate (from 1.0 to 5.0)");
+            try {
+                rate = Double.parseDouble(inKeyboard.readLine());
+                if (rate < 1.0 || rate > 5.0) {
+                    rate = null;
+                    outVideo.println("You must insert a rate between 1.0 and 5.0");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (NumberFormatException nfe) {
+                rate = null;
+                outVideo.println("You must insert a rate between 1.0 and 5.0");
+            }
         }
 
-        System.out.println(
-                "---------------------------------------------------------------------------------------------------------------------------------------------------------------");
+        outVideo.println("Do you recommend it? (y/n)");
+        boolean recommend = false;
+        String r = null;
+        while (r == null) {
+            try {
+                r = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (r.equalsIgnoreCase("y")) {
+                recommend = true;
+            } else if (!r.equalsIgnoreCase("n")) {
+                r = null;
+                outVideo.println("You can answer only y or n");
+            }
+        }
 
+        Review review = new Review(title, text, rate, recommend, p.getId(), u.getUsername());
+        ReviewDAO.insertReview(review);
+        outVideo.println("DONE.");
     }
 
-    private void publishers() {
-
-        while (true) {
-            outVideo.println("What do you want to do?");
-            outVideo.println("1. Add a new publisher");
-            outVideo.println("2. Delete a publisher");
-            outVideo.println("3. Read list of publisher");
-            outVideo.println("4. Go back");
-
-            String choice = "";
-
+    private void modifyQuantity(Product p) {
+        outVideo.println("Actually are available " + p.getAvailableItems() + "items.");
+        int n = -1;
+        while (n == -1) {
+            outVideo.println("Insert the new quantity:");
+            String number = null;
             try {
-                choice = inKeyboard.readLine();
+                number = inKeyboard.readLine();
             } catch (IOException ioe) {
                 ioe.printStackTrace();
             }
+            try {
+                n = Integer.parseInt(number);
 
-            if (choice.equals("1")) {
-                addPublisher();
-                break;
-            } else if (choice.equals("2")) {
-                deletePublisher();
-                break;
-            } else if (choice.equals("3")) {
-                showPublishersList();
-            } else if (choice.equals("4")) {
-                break;
-            } else
+                if (n < 0) {
+                    n = -1;
+                    outVideo.println("Insert a non-negative number");
+                }
+            } catch (NumberFormatException nfe) {
+                n = -1;
+                outVideo.println("You must insert a number");
+            }
+
+            ProductDAO.updateProductQuantity(p, n);
+        }
+    }
+
+    private void searchOrders(User u) {
+        HashMap<String, String> ordersList = OrderDAO.findOrdersByUserId(u.getUsername());
+
+        //Shows all the orders
+        int limit = showResults(ordersList);
+
+        if (limit != 0) {
+            //Retrieves the ID of the selected product
+            String id = chooseElement(ordersList, limit);
+
+            //Retrieves the details of the selected product
+            Order o = OrderDAO.findOrderById(id);
+
+            //Prints the details of the selected product
+            outVideo.println(o);
+
+            manageOrder(o, u);
+        }
+    }
+
+    private void manageOrder(Order o, User u) {
+        outVideo.println("What do you want to do now?");
+        if (u.getType().equals("EMP")) {
+            outVideo.println("u --> Update the state of the order");
+        }
+        if (o.getState().equals("OPENED")) {
+            outVideo.println("d --> Delete the order");
+        }
+        outVideo.println("b --> Go back to the main menu");
+        String choice = null;
+        while (choice == null) {
+            try {
+                choice = inKeyboard.readLine();
+
+                if (choice.equals("d")) {
+                    OrderDAO.deleteOrder(o);
+                } else if (u.getType().equals("EMP") && choice.equals("u")) {
+                    modifyState(o);
+                } else if (!choice.equals("b")) {
+                    choice = null;
+                    outVideo.println("WRONG INPUT");
+                }
+            } catch (Exception e) {
+                System.out.println("Exception: " + e);
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void modifyState(Order o) {
+        outVideo.println("The actual state of the order is: " + o.getState());
+        outVideo.println("Choose the new state:");
+        outVideo.println("o -> OPENED");
+        outVideo.println("t -> IN TRANSIT");
+        outVideo.println("c -> CLOSED");
+
+        String choice = null;
+        while (choice == null) {
+            try {
+                choice = inKeyboard.readLine();
+
+                if (choice.equals("o")) {
+                    OrderDAO.updateOrderState(o, "OPENED");
+                } else if (choice.equals("t")) {
+                    OrderDAO.updateOrderState(o, "IN TRANSIT");
+                } else if (!choice.equals("c")) {
+                    OrderDAO.updateOrderState(o, "CLOSED");
+                } else {
+                    choice = null;
+                    outVideo.println("WRONG INPUT");
+                }
+            } catch (Exception e) {
+                System.out.println("Exception: " + e);
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void retrieveCart(User u) {
+        HashMap<String, String> productsList = ProductDAO.findCartProductsByUser(u);
+
+        //Shows all the products
+        outVideo.println("Your cart products: ");
+        int limit = showResults(productsList);
+
+        String choice = null;
+        while (choice == null) {
+            outVideo.println("What do you want to do now?");
+            if (limit != 0) {
+                outVideo.println("s --> See the details of a product");
+            }
+            outVideo.println("p --> Purchase the cart");
+            outVideo.println("b --> Go back to the main menu");
+            try {
+                choice = inKeyboard.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (choice.equals("s") && limit != 0) {
+                manageCart(limit, productsList, u);
+                choice = null;
+            } else if (choice.equals("p")) {
+                purchaseCart(productsList, u);
+            } else if (!choice.equals("b")) {
                 outVideo.println("WRONG INPUT");
-        }
-
-    }
-
-    private void addPublisher() {
-        try {
-            outVideo.println("Name:");
-            String name = inKeyboard.readLine();
-
-            outVideo.println("Location:");
-            String location = inKeyboard.readLine();
-
-            PublisherKV.insertPublisher(database, name, location);
-
-        } catch (Exception e) {
-            System.out.println("Exception: " + e);
-            e.printStackTrace();
-        }
-    }
-
-    private void deletePublisher() {
-
-        int id = -1;
-        showPublishersList();
-        while (id == -1) {
-            outVideo.println("Which publisher do you want to delete?");
-            String choice = " ";
-            try {
-                choice = inKeyboard.readLine();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-            try {
-                id = Integer.parseInt(choice);
-            } catch (NumberFormatException nfe) {
-                id = -1;
-                outVideo.println("The ID must be a number");
             }
         }
 
-        PublisherKV.deletePublisher(database, id);
     }
 
-    private void showPublishersList() {
-        List<PublisherBean> list = PublisherKV.getPublishersList(database);
+    private void purchaseCart(HashMap<String, String> productsIds, User user) {
 
-        System.out.println("-----------------------------------------------------------------------------");
-        System.out.printf("%20s %20s %20s", "PUBLISHER ID", "NAME", "LOCATION");
-        System.out.println();
-        System.out.println("-----------------------------------------------------------------------------");
+        ArrayList<Product> productsList = new ArrayList<>();
+        Double totalAmount = 0.0;
+        for (String key : productsIds.keySet()) {
 
-        Iterator<PublisherBean> it = list.iterator();
-        while (it.hasNext()) {
-            PublisherBean p = (PublisherBean) it.next();
-            System.out.format("%20d %20s %20s", p.getId(), p.getName(), p.getLocation());
-            System.out.println();
+            Product p = ProductDAO.findProductById(key);
+            productsList.add(p);
+
+            //The purchased products are removed from the cart
+            ProductDAO.removeFromCart(key, user);
+
+            //Compute the total price for the order
+            totalAmount = totalAmount + p.getPrice();
         }
 
-        System.out.println("-----------------------------------------------------------------------------");
+        Order order = new Order(productsList, totalAmount, user.getUsername());
+        OrderDAO.insertOrder(order);
+    }
 
-    }*/
+
+    private void manageCart(int limit, HashMap<String, String> productsList, User user) {
+        if (limit != 0) {
+            //Retrieves the ID of the selected product
+            String id = chooseElement(productsList, limit);
+            //Retrieves the details of the selected product
+            Product p = ProductDAO.findProductById(id);
+            //Prints the details of the selected product
+            outVideo.println(p);
+
+            outVideo.println("Do you want to remove the product from the cart? (y/n)");
+            boolean answer = false;
+            String a = null;
+            while (a == null) {
+                try {
+                    a = inKeyboard.readLine();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (a.equalsIgnoreCase("y")) {
+                    answer = true;
+                } else if (!a.equalsIgnoreCase("n")) {
+                    a = null;
+                    outVideo.println("You can answer only y or n");
+                }
+            }
+            if (answer) {
+                ProductDAO.removeFromCart(id, user);
+            }
+        }
+    }
 
     public static void main(String[] args) {
         Client c = new Client();
     }
-
 }
