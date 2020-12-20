@@ -27,20 +27,16 @@ public class ProductDAO {
         return p;
     }
 
-    public static void insertProductToCart(Product p, User u) {
-        //Method to enter to the KV database and insert a new product to the cart
-    }
-
-    public static void updateProductQuantity(Product p, int q) {
-        //Method to enter to the database and set a new value for the quantity of the product
-    }
-
-    public static void insertProduct(Product p) {
-        //Method to enter to the database and insert the product (MongoDB, Neo4J!!!)
-    }
-
-    public static void deleteProduct(Product p) {
-        //Method to enter to the database and delete the product (MongoDB, Neo4J, KV!!!)
+    public static HashMap<String, String> findSuggestedProductsByUsername(String username) {
+        //MOCK
+        HashMap<String, String> map = new HashMap<>();
+        map.put("oo1", "p1");
+        map.put("oo2", "p2");
+        map.put("oo3", "p3");
+        map.put("oo4", "p4");
+        map.put("oo5", "p5");
+        map.put("oo6", "p6");
+        return map;
     }
 
     public static HashMap<String, String> findCartProductsByUser(User u) {
@@ -58,19 +54,28 @@ public class ProductDAO {
 
     }
 
-    public static void removeFromCart(String id, User user) {
-        //Method to enter the KV database and remove the product from the cart
+    public static void insertProduct(Product p) {
+        //Method to enter to the database and insert the product (MongoDB, Neo4J!!!)
+        System.out.println("DONE.");
     }
 
-    public static HashMap<String, String> findSuggestedProductsByUsername(String username) {
-        //MOCK
-        HashMap<String, String> map = new HashMap<>();
-        map.put("oo1", "p1");
-        map.put("oo2", "p2");
-        map.put("oo3", "p3");
-        map.put("oo4", "p4");
-        map.put("oo5", "p5");
-        map.put("oo6", "p6");
-        return map;
+    public static void insertProductToCart(Product p, User u) {
+        //Method to enter to the KV database and insert a new product to the cart
+        System.out.println("DONE.");
+    }
+
+    public static void updateProductQuantity(Product p, int q) {
+        //Method to enter to the database and set a new value for the quantity of the product
+        System.out.println("DONE.");
+    }
+
+    public static void removeFromCart(String id, User user) {
+        //Method to enter the KV database and remove the product from the cart
+        System.out.println("DONE.");
+    }
+
+    public static void deleteProduct(Product p) {
+        //Method to enter to the database and delete the product (MongoDB, Neo4J, KV!!!)
+        System.out.println("DONE.");
     }
 }

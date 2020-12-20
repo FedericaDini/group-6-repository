@@ -1,5 +1,7 @@
 package beans;
 
+import utilities.Types.OrderState;
+
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -8,7 +10,7 @@ public class Order {
     private Date date;
     private ArrayList<Product> products;
     private Double totalAmount;
-    private String state;
+    private OrderState state;
     private String userId;
 
     public String getUserId() {
@@ -51,19 +53,20 @@ public class Order {
         this.totalAmount = totalAmount;
     }
 
-    public String getState() {
+    public OrderState getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(OrderState state) {
         this.state = state;
     }
 
-    public Order(ArrayList<Product> products, Double totalAmount, String userId) {
+    public Order(ArrayList<Product> products, Double totalAmount, String userId, OrderState state) {
         this.products = products;
         this.totalAmount = totalAmount;
         this.userId = userId;
         this.userId = userId;
+        this.state = state;
     }
 
     @Override

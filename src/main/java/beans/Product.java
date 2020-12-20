@@ -110,7 +110,7 @@ public class Product {
         this.reviewsList = reviewsList;
     }
 
-    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, int availableItems, double price, String description, ArrayList<Review> reviewsList, double rate) {
+    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, int availableItems, double price, String description, ArrayList<Review> reviewsList) {
         this.name = name;
         this.brand = brand;
         this.mainCategory = mainCategory;
@@ -118,7 +118,7 @@ public class Product {
         this.availableItems = availableItems;
         this.price = price;
         this.description = description;
-        this.rate = rate;
+        this.rate = 0.0;
         this.reviewsList = reviewsList;
     }
 

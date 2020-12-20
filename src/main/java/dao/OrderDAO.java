@@ -2,6 +2,7 @@ package dao;
 
 import beans.Order;
 import beans.Product;
+import utilities.Types.OrderState;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -34,21 +35,26 @@ public class OrderDAO {
         productsList.add(p2);
         productsList.add(p3);
 
-        Order o = new Order(productsList, 37.5, "pippo");
+        Order o = new Order(productsList, 37.5, "pippo", OrderState.OPENED);
 
         return o;
-    }
-
-    public static void updateOrderState(Order o, String s){
-        //Method to enter to the database and set a new value for the quantity of the product
-    }
-
-    public static void deleteOrder(Order o) {
-        //Method to enter to the database and delete the product (MongoDB, Neo4J!!!)
     }
 
     public static void insertOrder(Order order) {
         //Method to insert a new order (in MongoDB and Neo4J!!!)
         //We have to set the date (real date of the order)
+        System.out.println("DONE.");
     }
+
+    public static void deleteOrder(Order o) {
+        //Method to enter to the database and delete the product (MongoDB, Neo4J!!!)
+        System.out.println("DONE.");
+    }
+
+    public static void updateOrderState(Order o, OrderState s) {
+        //Method to enter to the database and set a new value for the quantity of the product
+        System.out.println("DONE.");
+    }
+
+
 }
