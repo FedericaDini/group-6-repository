@@ -21,6 +21,8 @@ public class DataChanges {
         //products
 
         String id = (String) employee.get("id");
+        String id2 = (String) employee.get("id");
+
         String name = (String) employee.get("name");
         String brand = (String) employee.get("brand");
 
@@ -36,6 +38,7 @@ public class DataChanges {
 
 
 
+
         newJson.put("id",id);
         newJson.put("name",name);
         newJson.put("brand",brand);
@@ -44,9 +47,9 @@ public class DataChanges {
         newJson.put("idReview",reviews_id);
 
 
+        //System.out.println(newJson.get("brand"));
 
-
-
+        //System.out.println(newJson.get("id"));
 
 
 
@@ -68,6 +71,8 @@ public class DataChanges {
         newReview.put("text",reviewText);
         newReview.put("title",reviewTitle);
         newReview.put("username",reviewUsername);
+
+        //System.out.println(newReview.get("text"));
 
 
     }
