@@ -680,17 +680,15 @@ public class Client {
 
         if (limit != 0) {
             String choice = "";
-            while (choice == "") {
+            while (choice.equals("")) {
                 outVideo.println("What do you want to do now?");
-                if (limit != 0) {
-                    outVideo.println("s --> See the details of a product");
-                }
+                outVideo.println("s --> See the details of a product");
                 outVideo.println("a --> Buy all");
                 outVideo.println("b --> Go back");
                 try {
                     choice = inKeyboard.readLine();
 
-                    if (choice.equals("s") && limit != 0) {
+                    if (choice.equals("s")) {
                         manageCart(limit, productsList, u);
                         choice = "";
                     } else if (choice.equals("a")) {
