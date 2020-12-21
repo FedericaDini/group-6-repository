@@ -124,6 +124,6 @@ public class AmazonDatasetPreprocess {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        System.out.println("PROVA");
     }
 }
