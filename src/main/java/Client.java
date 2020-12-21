@@ -1,5 +1,6 @@
 import beans.*;
-import dao.*;
+import DAOs.DocumentDatabaseDAOs.*;
+import DAOs.KVDatabaseDAO;
 import utilities.Types.*;
 import utilities.Validation;
 
@@ -12,6 +13,8 @@ import java.util.Iterator;
 public class Client {
     private BufferedReader inKeyboard;
     private PrintWriter outVideo;
+
+    private static final KVDatabaseDAO kvDatabase = new KVDatabaseDAO();
 
     public Client() {
 
@@ -82,16 +85,22 @@ public class Client {
                             if (user.getType() == UserType.ADMIN) {
                                 //The administrator can create only profiles for employees
                                 register(UserType.EMP);
+                            } else {
+                                outVideo.println("WRONG INPUT");
                             }
                             break;
                         case "u":
                             if (user.getType() == UserType.ADMIN) {
                                 searchUsers();
+                            } else {
+                                outVideo.println("WRONG INPUT");
                             }
                             break;
                         case "a":
                             if (user.getType() == UserType.ADMIN || user.getType() == UserType.EMP) {
                                 addProduct();
+                            } else {
+                                outVideo.println("WRONG INPUT");
                             }
                             break;
                         case "d":
@@ -111,11 +120,15 @@ public class Client {
 
                                     manageProduct(p, user);
                                 }
+                            } else {
+                                outVideo.println("WRONG INPUT");
                             }
                             break;
                         case "c":
                             if (user.getType() == UserType.CUST) {
                                 retrieveCart(user);
+                            } else {
+                                outVideo.println("WRONG INPUT");
                             }
                             break;
                         case "o":
@@ -126,10 +139,14 @@ public class Client {
                             break;
                         case "l":
                             user = null;
+                            //Close connection to KV database
+                            kvDatabase.closeDB();
                             break;
                         case "q":
                             outVideo.println("Goodbye!");
-                            //Close connection to database!!!!
+                            //Close connection to KV database
+                            kvDatabase.closeDB();
+                            //Close connection to databases!!!!
                             return;
                         default:
                             outVideo.println("WRONG INPUT");
@@ -141,6 +158,9 @@ public class Client {
             } else {
                 user = authenticate();
                 outVideo.println("Hello, " + user.getUsername());
+                if (user.getType() == UserType.CUST) {
+                    kvDatabase.openDB();
+                }
             }
         }
     }
@@ -292,6 +312,7 @@ public class Client {
 
                 if (d.equalsIgnoreCase("y")) {
                     UserDAO.deleteUser(u);
+                    kvDatabase.removeUserFromCart(u.getUsername());
                 } else if (!d.equalsIgnoreCase("n")) {
                     d = null;
                     outVideo.println("You can answer only y or n");
@@ -473,7 +494,9 @@ public class Client {
             try {
                 choice = inKeyboard.readLine();
                 if (choice.equals("a")) {
-                    ProductDAO.insertProductToCart(p, u);
+                    outVideo.println("How many items do you want to add?");
+                    int quantity = Validation.takePositiveInt(inKeyboard, outVideo);
+                    kvDatabase.insertProductToCart(p, u.getUsername(), quantity);
                 } else if (choice.equals("r")) {
                     addReview(p, u);
                 } else if (u.getType() == UserType.EMP && choice.equals("m")) {
@@ -672,7 +695,7 @@ public class Client {
     }
 
     private void retrieveCart(User u) {
-        HashMap<String, String> productsList = ProductDAO.findCartProductsByUser(u);
+        HashMap<String, String> productsList = kvDatabase.getProductsByUsername(u.getUsername());
 
         //Shows all the products
         outVideo.println("Your cart products: ");
@@ -713,15 +736,15 @@ public class Client {
             Product p = ProductDAO.findProductById(key);
             productsList.add(p);
 
-            //The purchased products are removed from the cart
-            ProductDAO.removeFromCart(key, user);
-
             //Compute the total price for the order
             totalAmount = totalAmount + p.getPrice();
         }
 
         Order order = new Order(productsList, totalAmount, user.getUsername(), OrderState.OPENED);
         OrderDAO.insertOrder(order);
+
+        //The purchased products are removed from the cart
+        kvDatabase.removeUserFromCart(user.getUsername());
     }
 
 
@@ -752,7 +775,7 @@ public class Client {
                             outVideo.println("You can answer only y or n");
                         }
                         if (answer) {
-                            ProductDAO.removeFromCart(id, user);
+                            kvDatabase.removeProductFromCart(id, user.getUsername());
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

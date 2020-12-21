@@ -3,7 +3,6 @@ package utilities;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DecimalFormat;
 
 public class Validation {
     public static boolean validatePassword(String password, int length) {
@@ -40,8 +39,6 @@ public class Validation {
     }
 
     public static double takeValidPrice(BufferedReader inKeyboard, PrintWriter outVideo) {
-
-        DecimalFormat df = new DecimalFormat("0.00");
 
         double price = 0.0;
         while (price == 0.0) {

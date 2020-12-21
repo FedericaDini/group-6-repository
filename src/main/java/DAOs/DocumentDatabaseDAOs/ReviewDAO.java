@@ -1,4 +1,4 @@
-package dao;
+package DAOs.DocumentDatabaseDAOs;
 
 import beans.Review;
 

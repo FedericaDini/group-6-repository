@@ -1,4 +1,4 @@
-package dao;
+package DAOs.DocumentDatabaseDAOs;
 
 import beans.User;
 import utilities.Types.UserType;
@@ -20,8 +20,8 @@ public class UserDAO {
     public static User findUserByUsername(String username) {
         //Method to enter the database and search for a user given its credential
         if (username.equals("pippo")) {
-            //return new User("pippo", "password", UserType.CUST);
-            return new User("pippo", "password", UserType.ADMIN);
+            return new User("pippo", "password", UserType.CUST);
+            //return new User("pippo", "password", UserType.ADMIN);
             //return new User("pippo", "password", UserType.EMP);
         } else {
             return null;
@@ -49,6 +49,9 @@ public class UserDAO {
     public static void deleteUser(User u) {
         //Method to delete the user from the database (MongoDB, Neo4J and KV!!!)
         //we have also to delete the reviews, the cart anc the orders
+
+
+
         System.out.println("DONE.");
     }
 }
