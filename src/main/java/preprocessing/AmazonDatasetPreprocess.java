@@ -1,6 +1,8 @@
 package preprocessing;
 
 import DAOs.DocumentDatabaseDAOs.ConnectionToMongoDB;
+import DAOs.DocumentDatabaseDAOs.ProductDAO;
+import DAOs.DocumentDatabaseDAOs.ReviewDAO;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -9,12 +11,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import utilities.RandomGen;
 
-import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 
 public class AmazonDatasetPreprocess {
@@ -33,8 +31,8 @@ public class AmazonDatasetPreprocess {
             JSONArray rawData = (JSONArray) rawFile;
             rawData.forEach(rawObj ->
             {
-                parseProductObject((JSONObject) rawObj);
                 parseReviewObject((JSONObject) rawObj);
+                parseProductObject((JSONObject) rawObj);
                 parseUserObject((JSONObject) rawObj);
             });
 
@@ -61,8 +59,8 @@ public class AmazonDatasetPreprocess {
             String mainCategory = (String) rawProd.get("primaryCategories");
 
             ArrayList<Document> categoriesList = new ArrayList<>();
-            for (int i = 0; i < categories.length; i++) {
-                Document d = new Document("category", categories[i]);
+            for (String category : categories) {
+                Document d = new Document("category", category);
                 categoriesList.add(d);
             }
 
@@ -73,7 +71,8 @@ public class AmazonDatasetPreprocess {
                     .append("brand", brand)
                     .append("categories", categoriesList)
                     .append("mainCategory", mainCategory)
-                    .append("price", RandomGen.generateRandomPrice(90, 650));
+                    .append("price", RandomGen.generateRandomPrice(90, 650))
+                    .append("rate", ReviewDAO.computeAvgReviewsRateByProductId(database, id));
 
             //Insert the new object into MongoDB
             productsColl.insertOne(product);

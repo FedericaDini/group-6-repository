@@ -9,10 +9,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import utilities.RandomGen;
 
-import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
-import java.util.ArrayList;
 
 public class NikeAdidasDatasetPreprocess {
 
@@ -28,10 +25,7 @@ public class NikeAdidasDatasetPreprocess {
             rawFile = parser.parse(new FileReader(path));
 
             JSONArray rawData = (JSONArray) rawFile;
-            rawData.forEach(rawObj ->
-            {
-                parseProductObject((JSONObject) rawObj);
-            });
+            rawData.forEach(rawObj -> parseProductObject((JSONObject) rawObj));
 
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -41,7 +35,7 @@ public class NikeAdidasDatasetPreprocess {
     private static void parseProductObject(JSONObject rawProd) {
 
         //Retrieve the ID of the product
-        String id =  rawProd.get("Product ID").toString();
+        String id = rawProd.get("Product ID").toString();
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
@@ -61,7 +55,8 @@ public class NikeAdidasDatasetPreprocess {
                     .append("brand", brand)
                     .append("mainCategory", "Shoes & Clothing")
                     .append("description", description)
-                    .append("price", RandomGen.generateRandomPrice(70, 250));
+                    .append("price", RandomGen.generateRandomPrice(70, 250))
+                    .append("rate", 0.0);
 
             //Insert the new object into MongoDB
             productsColl.insertOne(product);
@@ -78,7 +73,6 @@ public class NikeAdidasDatasetPreprocess {
         NikeAdidasDatasetPreprocess nikeAdidasDatasetPreprocess = new NikeAdidasDatasetPreprocess();
         nikeAdidasDatasetPreprocess.retrieveFile("row-data-Nike.json");
         nikeAdidasDatasetPreprocess.retrieveFile("row-data-Adidas.json");
-
 
 
         connection.closeConnection();

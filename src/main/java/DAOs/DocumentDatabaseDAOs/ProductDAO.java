@@ -2,6 +2,7 @@ package DAOs.DocumentDatabaseDAOs;
 
 import beans.Product;
 import beans.User;
+import com.mongodb.client.MongoDatabase;
 
 import java.util.HashMap;
 
@@ -57,4 +58,5 @@ public class ProductDAO {
         //Method to enter to the database and delete the product (MongoDB, Neo4J, KV!!!)
         System.out.println("DONE.");
     }
+
 }
