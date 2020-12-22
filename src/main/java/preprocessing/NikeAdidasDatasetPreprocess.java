@@ -75,7 +75,6 @@ public class NikeAdidasDatasetPreprocess {
         nikeAdidasDatasetPreprocess.retrieveFile("row-data-Nike.json");
         nikeAdidasDatasetPreprocess.retrieveFile("row-data-Adidas.json");
 
-
         connection.closeConnection();
     }
 

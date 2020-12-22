@@ -58,7 +58,7 @@ public class UserDAO {
 
     //Enter the database and check if the given username is new
     public static boolean validUser(MongoDatabase database, String username) {
-        User user = UserDAO.findUserByUsername(database, username);
+        User user = findUserByUsername(database, username);
         return user == null;
     }
 

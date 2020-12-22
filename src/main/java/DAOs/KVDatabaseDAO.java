@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 public class KVDatabaseDAO {
+
     private static DB db = null;
 
     public void openDB() {
@@ -97,15 +98,6 @@ public class KVDatabaseDAO {
             }
         }
         return l;
-
-      /*  HashMap<String, String> map = new HashMap<>();
-        map.put("oo1", "p1");
-        map.put("oo2", "p2");
-        map.put("oo3", "p3");
-        map.put("oo4", "p4");
-        map.put("oo5", "p5");
-        map.put("oo6", "p6");
-        return map;*/
     }
 
     //Removes the product from the cart of a specific user
