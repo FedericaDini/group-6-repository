@@ -3,7 +3,6 @@ package beans;
 import java.util.Date;
 
 public class Review {
-    private String id;
     private Date date;
     private String title;
     private String text;
@@ -11,7 +10,6 @@ public class Review {
     private boolean doRecommend;
     private String prodId;
     private String userId;
-    //Do purchase???
 
     public String getUserId() {
         return userId;
@@ -27,14 +25,6 @@ public class Review {
 
     public void setProdId(String prodId) {
         this.prodId = prodId;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public Date getDate() {
@@ -84,5 +74,6 @@ public class Review {
         this.doRecommend = doRecommend;
         this.prodId = prodId;
         this.userId = userId;
+        this.date = new Date();
     }
 }

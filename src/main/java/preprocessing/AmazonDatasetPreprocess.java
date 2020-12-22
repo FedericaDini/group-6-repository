@@ -1,7 +1,6 @@
 package preprocessing;
 
 import DAOs.DocumentDatabaseDAOs.ConnectionToMongoDB;
-import DAOs.DocumentDatabaseDAOs.ProductDAO;
 import DAOs.DocumentDatabaseDAOs.ReviewDAO;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -20,6 +19,7 @@ public class AmazonDatasetPreprocess {
     private static ConnectionToMongoDB connection = null;
     private static MongoDatabase database = null;
 
+    @SuppressWarnings("unchecked")
     public void retrieveFile() {
 
         JSONParser parser = new JSONParser();

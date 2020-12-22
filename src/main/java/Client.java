@@ -1,6 +1,7 @@
 import beans.*;
 import DAOs.DocumentDatabaseDAOs.*;
 import DAOs.KVDatabaseDAO;
+import com.mongodb.client.MongoDatabase;
 import utilities.Types.*;
 import utilities.Validation;
 
@@ -17,6 +18,7 @@ public class Client {
     private static final KVDatabaseDAO kvDatabase = new KVDatabaseDAO();
 
     private final ConnectionToMongoDB connection;
+    private final MongoDatabase docDatabase;
 
     public Client() {
 
@@ -31,6 +33,8 @@ public class Client {
 
         // "mongodb://172.16.3.145:27017,172.16.3.146:27017,172.16.3.102:27017/" + "retryWrites=true&w=2&wtimeout=10000"
         //Real execution of the application
+
+        docDatabase = connection.getMongoDatabase();
 
         execute();
     }
@@ -60,7 +64,7 @@ public class Client {
 
                 outVideo.println("s --> Search products");
 
-                if (user.getType() == UserType.CUST) {
+                if (user.getType() == UserType.CUSTOMER) {
                     outVideo.println("d --> See details about a suggested product");
                     outVideo.println("c --> Go to cart");
                     outVideo.println("o --> Show my orders");
@@ -74,7 +78,7 @@ public class Client {
                 int limit = 0;
                 HashMap<String, String> suggestedProducts = new HashMap<>();
 
-                if (user.getType() == UserType.CUST) {
+                if (user.getType() == UserType.CUSTOMER) {
                     outVideo.println("The users that bought the same product as you, purchased also the products you can see below.");
                     outVideo.println("--- Suggested products ---");
 
@@ -112,7 +116,7 @@ public class Client {
                             }
                             break;
                         case "d":
-                            if (user.getType() == UserType.CUST && limit != 0) {
+                            if (user.getType() == UserType.CUSTOMER && limit != 0) {
                                 //Index of the selected product
                                 int index = chooseElement(limit);
 
@@ -133,7 +137,7 @@ public class Client {
                             }
                             break;
                         case "c":
-                            if (user.getType() == UserType.CUST) {
+                            if (user.getType() == UserType.CUSTOMER) {
                                 retrieveCart(user);
                             } else {
                                 outVideo.println("WRONG INPUT");
@@ -147,15 +151,15 @@ public class Client {
                             break;
                         case "l":
                             user = null;
-                            //Close connection to KV database
+                            //Close connection to KV docDatabase
                             kvDatabase.closeDB();
                             break;
                         case "q":
                             outVideo.println("Goodbye!");
-                            //Close connection to KV database
+                            //Close connection to KV docDatabase
                             kvDatabase.closeDB();
                             connection.closeConnection();
-                            //Close connection to document database
+                            //Close connection to document docDatabase
 
                             return;
                         default:
@@ -168,7 +172,7 @@ public class Client {
             } else {
                 user = authenticate();
                 outVideo.println("Hello, " + user.getUsername());
-                if (user.getType() == UserType.CUST) {
+                if (user.getType() == UserType.CUSTOMER) {
                     kvDatabase.openDB();
                 }
             }
@@ -192,8 +196,8 @@ public class Client {
                     if (action == 1) {
                         u = login();
                     } else if (action == 2) {
-                        //With the registration only customer profiles can be created
-                        u = register(UserType.CUST);
+                        //With the registration only CUSTOMERomer profiles can be created
+                        u = register(UserType.CUSTOMER);
                     } else {
                         authType = null;
                         outVideo.println("You can insert only 1 (login) or 2 (registration)");
@@ -224,7 +228,7 @@ public class Client {
 
                 String password = inKeyboard.readLine();
 
-                u = UserDAO.findUserByUsername(username);
+                u = UserDAO.findUserByUsername(docDatabase, username);
 
                 if (u != null && password.equals(u.getPassword())) {
                     logged = true;
@@ -250,7 +254,7 @@ public class Client {
             try {
                 username = inKeyboard.readLine();
 
-                if (UserDAO.validUser(username)) {
+                if (UserDAO.validUser(docDatabase, username)) {
                     unique = true;
                 } else {
                     outVideo.println("Username already in use");
@@ -276,7 +280,7 @@ public class Client {
         }
 
         User u = new User(username, password, type);
-        UserDAO.addUser(u);
+        UserDAO.addUser(docDatabase, u);
 
         return u;
     }
@@ -284,7 +288,7 @@ public class Client {
     private void searchUsers() {
 
         while (true) {
-            ArrayList<String> usersIds = UserDAO.findAllUsers();
+            ArrayList<String> usersIds = UserDAO.findAllUsernames(docDatabase);
 
             //Show all the usernames available
             Iterator<String> iterator = usersIds.iterator();
@@ -302,18 +306,18 @@ public class Client {
 
             if (index != 0) {
                 //Retrieve the user's details
-                User u = UserDAO.findUserByUsername(usersIds.get(index - 1));
+                User u = UserDAO.findUserByUsername(docDatabase, usersIds.get(index - 1));
 
                 outVideo.println(u);
 
-                manageUser(u);
+                manageUser(u.getUsername());
             } else {
                 break;
             }
         }
     }
 
-    private void manageUser(User u) {
+    private void manageUser(String username) {
         outVideo.println("Do you want to delete it? (y/n)");
         String d = null;
         while (d == null) {
@@ -321,8 +325,10 @@ public class Client {
                 d = inKeyboard.readLine();
 
                 if (d.equalsIgnoreCase("y")) {
-                    UserDAO.deleteUser(u);
-                    kvDatabase.removeUserFromCart(u.getUsername());
+                    UserDAO.deleteUser(docDatabase, username);
+                    kvDatabase.removeUserFromCart(username);
+                    ReviewDAO.deleteReviewsByUsername(docDatabase, username);
+                    //Remove orders and data in Neo4J!!!!
                 } else if (!d.equalsIgnoreCase("n")) {
                     d = null;
                     outVideo.println("You can answer only y or n");
@@ -401,7 +407,7 @@ public class Client {
 
             while (true) {
 
-                HashMap<String, String> results = ProductDAO.findProductsByString(research);
+                HashMap<String, String> results = ProductDAO.findProductsByString(docDatabase, research);
 
                 //Shows all the results of the search
                 int limit = showResults(results);
@@ -577,7 +583,7 @@ public class Client {
         }
 
         Review review = new Review(title, text, rate, recommend, p.getId(), u.getUsername());
-        ReviewDAO.insertReview(review);
+        ReviewDAO.addReview(docDatabase, review);
     }
 
     private void modifyQuantity(Product p) {
@@ -593,7 +599,7 @@ public class Client {
 
         HashMap<String, String> ordersList;
         User emp = null;
-        if (!(u.getType() == UserType.CUST)) {
+        if (!(u.getType() == UserType.CUSTOMER)) {
             emp = u;
             u = null;
             while (u == null) {
@@ -601,7 +607,7 @@ public class Client {
                 try {
                     String username = inKeyboard.readLine();
 
-                    u = UserDAO.findUserByUsername(username);
+                    u = UserDAO.findUserByUsername(docDatabase, username);
 
                     if (u == null) {
                         outVideo.println("This user doesn't exist");
@@ -795,6 +801,7 @@ public class Client {
         }
     }
 
+    @SuppressWarnings("unused")
     public static void main(String[] args) {
         Client c = new Client();
     }

@@ -11,6 +11,7 @@ import utilities.RandomGen;
 
 import java.io.FileReader;
 
+@SuppressWarnings("unchecked")
 public class NikeAdidasDatasetPreprocess {
 
     private static ConnectionToMongoDB connection = null;

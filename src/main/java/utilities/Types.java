@@ -2,7 +2,7 @@ package utilities;
 
 public class Types {
     public enum UserType {
-        CUST,
+        CUSTOMER,
         EMP,
         ADMIN
     }
