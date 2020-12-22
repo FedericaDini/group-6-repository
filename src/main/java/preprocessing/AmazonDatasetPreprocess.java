@@ -1,5 +1,9 @@
 package preprocessing;
 
+import DAOs.DocumentDatabaseDAOs.ConnectionToMongoDB;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -9,9 +13,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+
 
 public class AmazonDatasetPreprocess {
+
+    private static ConnectionToMongoDB connection = null;
+    private static MongoDatabase database = null;
 
     public void retrieveFile() {
 
@@ -21,64 +30,60 @@ public class AmazonDatasetPreprocess {
         try {
             rawFile = parser.parse(new FileReader("row-data-Amazon.json"));
 
-
-            File productsFile = new File("products.json");
-            File reviewsFile = new File("reviews.json");
-            File usersFile = new File("users.json");
-
-            final FileWriter fwP = new FileWriter(productsFile);
-            final FileWriter fwR = new FileWriter(reviewsFile);
-            final FileWriter fwU = new FileWriter(usersFile);
-
             JSONArray rawData = (JSONArray) rawFile;
             rawData.forEach(rawObj ->
             {
-                parseProductObject((JSONObject) rawObj, fwP);
-                parseReviewObject((JSONObject) rawObj, fwR);
-                parseUserObject((JSONObject) rawObj, fwU);
+                parseProductObject((JSONObject) rawObj);
+                parseReviewObject((JSONObject) rawObj);
+                parseUserObject((JSONObject) rawObj);
             });
-
-            fwP.close();
-            fwR.close();
-            fwU.close();
 
         } catch (Exception exception) {
             exception.printStackTrace();
         }
     }
 
-    private static void parseProductObject(JSONObject rawProd, FileWriter fwP) {
+    private static void parseProductObject(JSONObject rawProd) {
 
-        //Retrieve the details of the product
+        //Retrieve the ID of the product
         String id = (String) rawProd.get("id");
-        String name = (String) rawProd.get("name");
-        String brand = (String) rawProd.get("brand");
-        String[] categories = ((String) rawProd.get("categories")).split(",");
-        String mainCategory = (String) rawProd.get("primaryCategories");
 
-        //create a cleared product
-        JSONObject product = new JSONObject();
-        product.put("id", id);
-        product.put("name", name);
-        product.put("brand", brand);
+        //Check if the product is already present in the database
+        MongoCollection<Document> productsColl = database.getCollection("products");
+        boolean insert = connection.isNewElement(productsColl, id);
 
-        JSONArray array = new JSONArray();
-        for (int i = 0; i < categories.length; i++) {
-            array.add(categories[i]);
-        }
+        if (insert) {
 
-        product.put("categories", array);
-        product.put("mainCategory", mainCategory);
+            //Retrieve the details of the product
+            String name = (String) rawProd.get("name");
+            String brand = (String) rawProd.get("brand");
+            String[] categories = ((String) rawProd.get("categories")).split(",");
+            String mainCategory = (String) rawProd.get("primaryCategories");
 
-        try {
-            fwP.append(product.toJSONString() + "," + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
+            ArrayList<Document> categoriesList = new ArrayList<>();
+            for (int i = 0; i < categories.length; i++) {
+                Document d = new Document("category", categories[i]);
+                categoriesList.add(d);
+            }
+
+
+            //create a cleared product
+            Document product = new Document("id", id)
+                    .append("name", name)
+                    .append("brand", brand)
+                    .append("categories", categoriesList)
+                    .append("mainCategory", mainCategory)
+                    .append("price", RandomGen.generateRandomPrice(90, 650));
+
+            //Insert the new object into MongoDB
+            productsColl.insertOne(product);
         }
     }
 
 
-    private static void parseReviewObject(JSONObject rawRev, FileWriter fwR) {
+    private static void parseReviewObject(JSONObject rawRev) {
+
+        MongoCollection<Document> reviewsColl = database.getCollection("reviews");
 
         //Retrieve the details of the review
         String date = (String) rawRev.get("reviews.date");
@@ -89,41 +94,49 @@ public class AmazonDatasetPreprocess {
         String user = (String) rawRev.get("reviews.username");
         String product = (String) rawRev.get("id");
 
-        //create a cleared product
-        JSONObject review = new JSONObject();
-        review.put("date", date);
-        review.put("title", title);
-        review.put("text", text);
-        review.put("rate", rate);
-        review.put("doRecommend", doRecommend);
-        review.put("user", user);
-        review.put("product", product);
+        //create a cleared review
+        Document review = new Document("date", date)
+                .append("doRecommend", doRecommend)
+                .append("rate", rate)
+                .append("text", text)
+                .append("title", title)
+                .append("user", user)
+                .append("product", product);
 
-        try {
-            fwR.append(review.toJSONString() + "," + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        //Insert the new object into MongoDB
+        reviewsColl.insertOne(review);
     }
 
-    private void parseUserObject(JSONObject rawObj, FileWriter fwU) {
+    private void parseUserObject(JSONObject rawObj) {
 
-        //Retrieve the details of the review
+        //Retrieve the user of the product
         String username = (String) rawObj.get("reviews.username");
-        String password = RandomGen.generateRandomPassword(8);
 
-        //create a cleared product
-        JSONObject user = new JSONObject();
+        //Check if the user is already present in the database
+        MongoCollection<Document> usersColl = database.getCollection("users");
+        boolean insert = connection.isNewElement(usersColl, username);
 
-        user.put("username", username);
-        user.put("password", password);
+        if (insert) {
 
-        try {
-            fwU.append(user.toJSONString() + "," + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
+            //create a cleared user
+            Document user = new Document("username", username)
+                    .append("password", RandomGen.generateRandomString(8));
+
+            //Insert the new object into MongoDB
+            usersColl.insertOne(user);
         }
+    }
 
+    public static void main(String[] args) {
+
+        connection = new ConnectionToMongoDB();
+        connection.openConnection("mongodb://localhost:27017");
+
+        database = connection.getMongoDatabase();
+
+        AmazonDatasetPreprocess amazonDatasetPreprocess = new AmazonDatasetPreprocess();
+        amazonDatasetPreprocess.retrieveFile();
+
+        connection.closeConnection();
     }
 }

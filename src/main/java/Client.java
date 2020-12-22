@@ -16,6 +16,8 @@ public class Client {
 
     private static final KVDatabaseDAO kvDatabase = new KVDatabaseDAO();
 
+    private final ConnectionToMongoDB connection;
+
     public Client() {
 
         //Setting of the variables for IO operations
@@ -23,7 +25,13 @@ public class Client {
 
         outVideo.println("Welcome to E-SHOP!");
 
+        //Open connection to MongoDB
+        connection = new ConnectionToMongoDB();
+        connection.openConnection("mongodb://localhost:27017");
+
+        // "mongodb://172.16.3.145:27017,172.16.3.146:27017,172.16.3.102:27017/" + "retryWrites=true&w=2&wtimeout=10000"
         //Real execution of the application
+
         execute();
     }
 
@@ -146,7 +154,9 @@ public class Client {
                             outVideo.println("Goodbye!");
                             //Close connection to KV database
                             kvDatabase.closeDB();
-                            //Close connection to databases!!!!
+                            connection.closeConnection();
+                            //Close connection to document database
+
                             return;
                         default:
                             outVideo.println("WRONG INPUT");

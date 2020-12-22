@@ -1,9 +1,10 @@
 package utilities;
 
 import java.security.SecureRandom;
+import java.util.Random;
 
 public class RandomGen {
-    public static String generateRandomPassword(int length) {
+    public static String generateRandomString(int length) {
         // Possible characters inside the password (0-9, a-z, A-Z)
         final String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -17,5 +18,12 @@ public class RandomGen {
         }
 
         return stringBuilder.toString();
+    }
+
+    public static double generateRandomPrice(double min, double max) {
+        double random = new Random().nextDouble();
+        double price = min + (random * (max - min));
+        price = Math.round(price * 100.0) / 100.0;
+        return price;
     }
 }
