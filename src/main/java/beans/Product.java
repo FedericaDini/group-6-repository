@@ -8,7 +8,6 @@ public class Product {
     private String brand;
     private String mainCategory;
     private ArrayList<String> categories;
-    private int availableItems;
     private double price;
     private String description;
     private ArrayList<Review> reviewsList;
@@ -54,14 +53,6 @@ public class Product {
         this.categories = categories;
     }
 
-    public int getAvailableItems() {
-        return availableItems;
-    }
-
-    public void setAvailableItems(int availableItems) {
-        this.availableItems = availableItems;
-    }
-
     public double getPrice() {
         return price;
     }
@@ -97,25 +88,23 @@ public class Product {
     public Product() {
     }
 
-    public Product(String id, String name, String brand, String mainCategory, ArrayList<String> categories, int availableItems, double price, String description, ArrayList<Review> reviewsList, double rate) {
+    public Product(String id, String name, String brand, String mainCategory, ArrayList<String> categories, double price, String description, ArrayList<Review> reviewsList, double rate) {
         this.id = id;
         this.name = name;
         this.brand = brand;
         this.mainCategory = mainCategory;
         this.categories = categories;
-        this.availableItems = availableItems;
         this.price = price;
         this.description = description;
         this.rate = rate;
         this.reviewsList = reviewsList;
     }
 
-    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, int availableItems, double price, String description, ArrayList<Review> reviewsList) {
+    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, double price, String description, ArrayList<Review> reviewsList) {
         this.name = name;
         this.brand = brand;
         this.mainCategory = mainCategory;
         this.categories = categories;
-        this.availableItems = availableItems;
         this.price = price;
         this.description = description;
         this.rate = 0.0;
@@ -128,7 +117,6 @@ public class Product {
                 "Name: " + getName() + "\n" +
                 "Brand: " + getBrand() + "\n" +
                 "Main category: " + getMainCategory() + "\n" +
-                "Available items: " + getAvailableItems() + "\n" +
                 "Price: " + getPrice() + "\n" +
                 "Description: " + getDescription() + "\n" +
                 "Rate: " + getRate() + "\n";

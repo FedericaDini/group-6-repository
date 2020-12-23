@@ -26,9 +26,9 @@ public class OrderDAO {
     public static Order findOrderById(String id) {
         //Method to enter the database and find the order given the id
         //MOCK
-        Product p1 = new Product("ab12", "stdProd", "stdbrand", "stdCat", null, 20, 12.5, "std description", null, 4.0);
-        Product p2 = new Product("cd45", "stdProd", "stdbrand", "stdCat", null, 20, 12.5, "std description", null, 4.0);
-        Product p3 = new Product("ef67", "stdProd", "stdbrand", "stdCat", null, 20, 12.5, "std description", null, 4.0);
+        Product p1 = new Product("ab12", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
+        Product p2 = new Product("cd45", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
+        Product p3 = new Product("ef67", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
 
         ArrayList<Product> productsList = new ArrayList<>();
         productsList.add(p1);

@@ -9,6 +9,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import utilities.RandomGen;
+import utilities.Types;
 
 import java.io.FileReader;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class AmazonDatasetPreprocess {
     private static void parseProductObject(JSONObject rawProd) {
 
         //Retrieve the ID of the product
-        String id = (String) rawProd.get("id");
+        String id = (String) rawProd.get("_id");
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
@@ -66,7 +67,7 @@ public class AmazonDatasetPreprocess {
 
 
             //create a cleared product
-            Document product = new Document("id", id)
+            Document product = new Document("_id", id)
                     .append("name", name)
                     .append("brand", brand)
                     .append("categories", categoriesList)
@@ -119,7 +120,8 @@ public class AmazonDatasetPreprocess {
 
             //create a cleared user
             Document user = new Document("username", username)
-                    .append("password", RandomGen.generateRandomString(8));
+                    .append("password", RandomGen.generateRandomString(8))
+                    .append("type", Types.UserType.CUSTOMER.toString());
 
             //Insert the new object into MongoDB
             usersColl.insertOne(user);

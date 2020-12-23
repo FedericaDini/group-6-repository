@@ -125,7 +125,7 @@ public class Client {
                                     String id = retrieveIdFromIndex(suggestedProducts, index);
 
                                     //Details of the selected product
-                                    Product p = ProductDAO.findProductById(id);
+                                    Product p = ProductDAO.findProductById(docDatabase, id);
 
                                     //Prints the details of the selected product
                                     outVideo.println(p);
@@ -378,9 +378,6 @@ public class Client {
             }
         }
 
-        outVideo.println("How many items are available?");
-        int quantity = Validation.takePositiveInt(inKeyboard, outVideo);
-
         outVideo.println("Insert the price:");
         double price = Validation.takeValidPrice(inKeyboard, outVideo);
 
@@ -394,8 +391,8 @@ public class Client {
             e.printStackTrace();
         }
 
-        Product product = new Product(name, brand, mainCategory, categories, quantity, price, description, null);
-        ProductDAO.insertProduct(product);
+        Product product = new Product(name, brand, mainCategory, categories, price, description, null);
+        ProductDAO.insertProduct(docDatabase, product);
     }
 
     private void searchProducts(User user) {
@@ -424,7 +421,7 @@ public class Client {
                         String id = retrieveIdFromIndex(results, index);
 
                         //Details of the selected product
-                        Product p = ProductDAO.findProductById(id);
+                        Product p = ProductDAO.findProductById(docDatabase, id);
 
                         //Prints the details of the selected product
                         outVideo.println(p);
@@ -515,10 +512,8 @@ public class Client {
                     kvDatabase.insertProductToCart(p, u.getUsername(), quantity);
                 } else if (choice.equals("r")) {
                     addReview(p, u);
-                } else if (u.getType() == UserType.EMPLOYEE && choice.equals("m")) {
-                    modifyQuantity(p);
                 } else if (u.getType() == UserType.EMPLOYEE && choice.equals("d")) {
-                    ProductDAO.deleteProduct(p);
+                    ProductDAO.deleteProduct(docDatabase, p.getId());
                 } else if (!choice.equals("b")) {
                     outVideo.println("WRONG INPUT");
                 }
@@ -584,15 +579,6 @@ public class Client {
 
         Review review = new Review(title, text, rate, recommend, p.getId(), u.getUsername());
         ReviewDAO.addReview(docDatabase, review);
-    }
-
-    private void modifyQuantity(Product p) {
-        outVideo.println("Actually are available " + p.getAvailableItems() + "items.");
-
-        outVideo.println("Insert the new quantity:");
-
-        int quantity = Validation.takePositiveInt(inKeyboard, outVideo);
-        ProductDAO.updateProductQuantity(p, quantity);
     }
 
     private void searchOrders(User u) {
@@ -749,7 +735,7 @@ public class Client {
         double totalAmount = 0.00;
         for (String key : productsIds.keySet()) {
 
-            Product p = ProductDAO.findProductById(key);
+            Product p = ProductDAO.findProductById(docDatabase, key);
             productsList.add(p);
 
             //Compute the total price for the order
@@ -773,7 +759,7 @@ public class Client {
                 //Index of the selected product
                 String id = retrieveIdFromIndex(productsList, index);
                 //Details of the selected product
-                Product p = ProductDAO.findProductById(id);
+                Product p = ProductDAO.findProductById(docDatabase, id);
                 //Prints the details of the selected product
                 outVideo.println(p);
 

@@ -1,13 +1,12 @@
 package DAOs.DocumentDatabaseDAOs;
 
 import beans.Product;
-import beans.User;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
-import utilities.Types;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,10 +21,8 @@ public class ProductDAO {
 
         MongoCollection<Document> productsColl = database.getCollection("products");
 
-        Document regexQuery = new Document();
-        regexQuery.append("$regex", ".*" + Pattern.quote(string) + ".*");
-        BasicDBObject criteria = new BasicDBObject("name", regexQuery);
-        MongoCursor<Document> cursor = productsColl.find(criteria).iterator();
+        Pattern pattern = Pattern.compile(".*" + Pattern.quote(string) + ".*", Pattern.CASE_INSENSITIVE);
+        MongoCursor<Document> cursor = productsColl.find(Filters.regex("name", pattern)).iterator();
 
         while (cursor.hasNext()) {
             Document d = cursor.next();
@@ -48,14 +45,19 @@ public class ProductDAO {
         if (cursor.hasNext()) {
             Document d = cursor.next();
 
-            p = new Product(d.getString("id"), d.getString("name"), d.getString("brand"), d.getString("mainCategory"), d.get("categories"), availableItems ? ??,
-            d.getDouble("price"), d.getString("description"), reviewsList ???,d.getDouble("rate"));
+            ArrayList<String> categories = new ArrayList<>();
+
+            MongoCollection<Document> categoriesCollection = (MongoCollection<Document>) d.get("categories");
+            MongoCursor<Document> cursor2 = categoriesCollection.find().iterator();
+            while (cursor2.hasNext()) {
+                Document cat = cursor2.next();
+                String category = cat.getString("category");
+                categories.add(category);
+            }
+
+            p = new Product(d.getString("id"), d.getString("name"), d.getString("brand"), d.getString("mainCategory"), categories, d.getDouble("price"), d.getString("description"), ReviewDAO.findReviewsByProductId(database, id), d.getDouble("rate"));
         }
 
-        return u;
-
-
-        Product p = new Product("ab12", "stdProd", "stdbrand", "stdCat", null, 20, 12.5, "std description", null, 4.0);
         return p;
     }
 
@@ -71,23 +73,30 @@ public class ProductDAO {
         return map;
     }
 
-    public static void insertProduct(Product p) {
-        //Method to enter to the database and insert the product (MongoDB, Neo4J!!!)
+    public static void insertProduct(MongoDatabase database, Product product) {
+
+        MongoCollection<Document> productsColl = database.getCollection("products");
+
+        Document p = new Document("name", product.getName())
+                .append("brand", product.getBrand())
+                .append("mainCategory", product.getMainCategory())
+                .append("categories", product.getCategories())
+                .append("description", product.getDescription())
+                .append("price", product.getPrice());
+
+        productsColl.insertOne(p);
         System.out.println("DONE.");
     }
 
-    public static void insertProductToCart(Product p, User u) {
-        //Method to enter to the KV database and insert a new product to the cart
-        System.out.println("DONE.");
-    }
 
-    public static void updateProductQuantity(Product p, int q) {
-        //Method to enter to the database and set a new value for the quantity of the product
-        System.out.println("DONE.");
-    }
+    public static void deleteProduct(MongoDatabase database, String id) {
 
-    public static void deleteProduct(Product p) {
-        //Method to enter to the database and delete the product (MongoDB, Neo4J, KV!!!)
+        MongoCollection<Document> productsColl = database.getCollection("products");
+
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("_id", id);
+        productsColl.deleteOne(whereQuery);
+
         System.out.println("DONE.");
     }
 

@@ -51,7 +51,7 @@ public class NikeAdidasDatasetPreprocess {
 
 
             //create a cleared product
-            Document product = new Document("id", id)
+            Document product = new Document("_id", id)
                     .append("name", name)
                     .append("brand", brand)
                     .append("mainCategory", "Shoes & Clothing")

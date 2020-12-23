@@ -41,7 +41,7 @@ public class ConnectionToMongoDB {
 
     public boolean isNewElement(MongoCollection<Document> collection, String id) {
         BasicDBObject whereQuery = new BasicDBObject();
-        whereQuery.put("id", id);
+        whereQuery.put("_id", id);
         MongoCursor<Document> cursor = collection.find(whereQuery).iterator();
         if (cursor.hasNext()) {
             return false;
