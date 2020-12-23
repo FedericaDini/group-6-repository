@@ -46,8 +46,8 @@ public class UserDAO {
                 type = UserType.ADMIN;
             } else if (t.equals(UserType.CUSTOMER.toString())) {
                 type = UserType.CUSTOMER;
-            } else if (t.equals(UserType.EMP.toString())) {
-                type = UserType.EMP;
+            } else if (t.equals(UserType.EMPLOYEE.toString())) {
+                type = UserType.EMPLOYEE;
             }
 
             u = new User(username, d.getString("password"), type);
@@ -82,7 +82,6 @@ public class UserDAO {
         BasicDBObject whereQuery = new BasicDBObject();
         whereQuery.put("username", username);
         usersColl.deleteOne(whereQuery);
-
         System.out.println("DONE.");
     }
 }

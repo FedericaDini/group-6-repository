@@ -57,7 +57,7 @@ public class Client {
                     outVideo.println("e --> Add a new employee");
                     outVideo.println("u --> Search users");
                 }
-                if (user.getType() == UserType.EMP || user.getType() == UserType.ADMIN) {
+                if (user.getType() == UserType.EMPLOYEE || user.getType() == UserType.ADMIN) {
                     outVideo.println("a --> Add a new product");
                     outVideo.println("o --> Search orders");
                 }
@@ -96,7 +96,7 @@ public class Client {
                         case "e":
                             if (user.getType() == UserType.ADMIN) {
                                 //The administrator can create only profiles for employees
-                                register(UserType.EMP);
+                                register(UserType.EMPLOYEE);
                             } else {
                                 outVideo.println("WRONG INPUT");
                             }
@@ -109,7 +109,7 @@ public class Client {
                             }
                             break;
                         case "a":
-                            if (user.getType() == UserType.ADMIN || user.getType() == UserType.EMP) {
+                            if (user.getType() == UserType.ADMIN || user.getType() == UserType.EMPLOYEE) {
                                 addProduct();
                             } else {
                                 outVideo.println("WRONG INPUT");
@@ -498,7 +498,7 @@ public class Client {
         outVideo.println("a --> Add the product to my cart");
         outVideo.println("r --> Add a review for the product");
 
-        if (u.getType() == UserType.EMP) {
+        if (u.getType() == UserType.EMPLOYEE) {
             outVideo.println("m --> Modify the quantity of the product");
             outVideo.println("d --> Delete the product");
         }
@@ -515,9 +515,9 @@ public class Client {
                     kvDatabase.insertProductToCart(p, u.getUsername(), quantity);
                 } else if (choice.equals("r")) {
                     addReview(p, u);
-                } else if (u.getType() == UserType.EMP && choice.equals("m")) {
+                } else if (u.getType() == UserType.EMPLOYEE && choice.equals("m")) {
                     modifyQuantity(p);
-                } else if (u.getType() == UserType.EMP && choice.equals("d")) {
+                } else if (u.getType() == UserType.EMPLOYEE && choice.equals("d")) {
                     ProductDAO.deleteProduct(p);
                 } else if (!choice.equals("b")) {
                     outVideo.println("WRONG INPUT");
@@ -654,7 +654,7 @@ public class Client {
 
     private void manageOrder(Order o, User u) {
         outVideo.println("What do you want to do now?");
-        if (u.getType() == UserType.EMP) {
+        if (u.getType() == UserType.EMPLOYEE) {
             outVideo.println("u --> Update the state of the order");
         }
         if (o.getState() == OrderState.OPENED) {
@@ -668,7 +668,7 @@ public class Client {
 
                 if (choice.equals("d")) {
                     OrderDAO.deleteOrder(o);
-                } else if (u.getType() == UserType.EMP && choice.equals("u")) {
+                } else if (u.getType() == UserType.EMPLOYEE && choice.equals("u")) {
                     modifyState(o);
                 } else if (!choice.equals("b")) {
                     choice = null;

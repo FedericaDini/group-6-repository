@@ -3,7 +3,7 @@ package utilities;
 public class Types {
     public enum UserType {
         CUSTOMER,
-        EMP,
+        EMPLOYEE,
         ADMIN
     }
 
