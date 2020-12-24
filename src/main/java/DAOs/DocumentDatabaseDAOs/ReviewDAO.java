@@ -61,7 +61,7 @@ public class ReviewDAO {
         while (cursor.hasNext()) {
 
             Document d = cursor.next();
-            avg = avg + d.getDouble("rate");
+            avg = avg + d.getLong("rate").doubleValue();
             nReviews++;
         }
         return avg / nReviews;

@@ -4,6 +4,7 @@ import com.mongodb.*;
 import com.mongodb.client.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.util.JSON;
 import org.bson.BsonArray;
 import org.bson.Document;
@@ -37,6 +38,10 @@ public class ConnectionToMongoDB {
 
         // Accessing the database
         database = mongo.getDatabase("e-shop");
+
+        //Creating the index for the product search if not exists
+        database.getCollection("products").createIndex(Indexes.text( "name"));
+
     }
 
     public boolean isNewElement(MongoCollection<Document> collection, String id) {

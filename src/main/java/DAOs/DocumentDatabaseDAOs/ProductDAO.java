@@ -2,6 +2,8 @@ package DAOs.DocumentDatabaseDAOs;
 
 import beans.Product;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DBCursor;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -10,6 +12,7 @@ import org.bson.Document;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ProductDAO {
@@ -21,12 +24,12 @@ public class ProductDAO {
 
         MongoCollection<Document> productsColl = database.getCollection("products");
 
-        Pattern pattern = Pattern.compile(".*" + Pattern.quote(string) + ".*", Pattern.CASE_INSENSITIVE);
-        MongoCursor<Document> cursor = productsColl.find(Filters.regex("name", pattern)).iterator();
+        //MongoCursor<Document> cursor = productsColl.find(Filters.text(string)).iterator();
 
-        while (cursor.hasNext()) {
-            Document d = cursor.next();
-            map.put(d.getString("id"), d.getString("name"));
+        FindIterable<Document> cursor = productsColl.find(new BasicDBObject("$text", new BasicDBObject("$search", string)));
+
+        for (Document d : cursor) {
+            map.put(d.getString("_id"), d.getString("name"));
         }
 
         return map;

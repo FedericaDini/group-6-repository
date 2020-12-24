@@ -45,7 +45,7 @@ public class AmazonDatasetPreprocess {
     private static void parseProductObject(JSONObject rawProd) {
 
         //Retrieve the ID of the product
-        String id = (String) rawProd.get("_id");
+        String id = (String) rawProd.get("id");
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
