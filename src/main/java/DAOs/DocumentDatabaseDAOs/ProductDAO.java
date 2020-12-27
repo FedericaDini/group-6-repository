@@ -2,18 +2,16 @@ package DAOs.DocumentDatabaseDAOs;
 
 import beans.Product;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBCursor;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
 import org.bson.Document;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ListIterator;
 
 public class ProductDAO {
 
@@ -23,8 +21,6 @@ public class ProductDAO {
         HashMap<String, String> map = new HashMap<>();
 
         MongoCollection<Document> productsColl = database.getCollection("products");
-
-        //MongoCursor<Document> cursor = productsColl.find(Filters.text(string)).iterator();
 
         FindIterable<Document> cursor = productsColl.find(new BasicDBObject("$text", new BasicDBObject("$search", string)));
 
@@ -43,22 +39,23 @@ public class ProductDAO {
         MongoCollection<Document> productsColl = database.getCollection("products");
 
         BasicDBObject whereQuery = new BasicDBObject();
-        whereQuery.put("id", id);
+        whereQuery.put("_id", id);
         MongoCursor<Document> cursor = productsColl.find(whereQuery).iterator();
         if (cursor.hasNext()) {
             Document d = cursor.next();
 
-            ArrayList<String> categories = new ArrayList<>();
+            ArrayList<String> categoriesList = new ArrayList<>();
 
-            MongoCollection<Document> categoriesCollection = (MongoCollection<Document>) d.get("categories");
-            MongoCursor<Document> cursor2 = categoriesCollection.find().iterator();
-            while (cursor2.hasNext()) {
-                Document cat = cursor2.next();
-                String category = cat.getString("category");
-                categories.add(category);
+            List<String> categories = (List<String>) d.get("categories");
+            if (categories != null) {
+                ListIterator<String> iterator = categories.listIterator();
+                while (iterator.hasNext()) {
+                    String s = iterator.next();
+                    categoriesList.add(s);
+                }
             }
 
-            p = new Product(d.getString("id"), d.getString("name"), d.getString("brand"), d.getString("mainCategory"), categories, d.getDouble("price"), d.getString("description"), ReviewDAO.findReviewsByProductId(database, id), d.getDouble("rate"));
+            p = new Product(d.getString("_id"), d.getString("name"), d.getString("brand"), d.getString("mainCategory"), categoriesList, d.getDouble("price"), d.getString("description"), ReviewDAO.findReviewsByProductId(database, id), d.getDouble("rate"));
         }
 
         return p;
@@ -80,15 +77,17 @@ public class ProductDAO {
 
         MongoCollection<Document> productsColl = database.getCollection("products");
 
-        Document p = new Document("name", product.getName())
+        Document p = new Document("_id", product.getId())
+                .append("name", product.getName())
                 .append("brand", product.getBrand())
                 .append("mainCategory", product.getMainCategory())
                 .append("categories", product.getCategories())
                 .append("description", product.getDescription())
-                .append("price", product.getPrice());
+                .append("price", product.getPrice())
+                .append("rate", product.getRate());
 
         productsColl.insertOne(p);
-        System.out.println("DONE.");
+        System.out.println("DONE." + "\n");
     }
 
 
@@ -99,8 +98,7 @@ public class ProductDAO {
         BasicDBObject whereQuery = new BasicDBObject();
         whereQuery.put("_id", id);
         productsColl.deleteOne(whereQuery);
-
-        System.out.println("DONE.");
+        System.out.println("DONE." + "\n");
     }
 
 }

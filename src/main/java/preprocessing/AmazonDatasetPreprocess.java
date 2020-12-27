@@ -5,6 +5,7 @@ import DAOs.DocumentDatabaseDAOs.ReviewDAO;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -12,7 +13,10 @@ import utilities.RandomGen;
 import utilities.Types;
 
 import java.io.FileReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 
 public class AmazonDatasetPreprocess {
@@ -59,18 +63,16 @@ public class AmazonDatasetPreprocess {
             String[] categories = ((String) rawProd.get("categories")).split(",");
             String mainCategory = (String) rawProd.get("primaryCategories");
 
-            ArrayList<Document> categoriesList = new ArrayList<>();
-            for (String category : categories) {
-                Document d = new Document("category", category);
-                categoriesList.add(d);
+            ArrayList<String> catsList = new ArrayList<>();
+            for (int i = 0; i < categories.length; i++) {
+                catsList.add(categories[i]);
             }
-
 
             //create a cleared product
             Document product = new Document("_id", id)
                     .append("name", name)
                     .append("brand", brand)
-                    .append("categories", categoriesList)
+                    .append("categories", catsList)
                     .append("mainCategory", mainCategory)
                     .append("price", RandomGen.generateRandomPrice(90, 650))
                     .append("rate", ReviewDAO.computeAvgReviewsRateByProductId(database, id));
@@ -80,15 +82,24 @@ public class AmazonDatasetPreprocess {
         }
     }
 
-
     private static void parseReviewObject(JSONObject rawRev) {
 
         MongoCollection<Document> reviewsColl = database.getCollection("reviews");
 
         //Retrieve the details of the review
-        String date = (String) rawRev.get("reviews.date");
+        String dateS = (String) rawRev.get("reviews.date");
+
+        Date date = null;
+
+        try {
+            date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(dateS);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
         Boolean doRecommend = (Boolean) rawRev.get("reviews.doRecommend");
-        Long rate = (Long) rawRev.get("reviews.rating");
+        Long rating = (Long) rawRev.get("reviews.rating");
+        double rate = rating.doubleValue();
         String text = (String) rawRev.get("reviews.text");
         String title = (String) rawRev.get("reviews.title");
         String user = (String) rawRev.get("reviews.username");

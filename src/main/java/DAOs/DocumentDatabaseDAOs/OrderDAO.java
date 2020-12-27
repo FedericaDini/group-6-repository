@@ -2,59 +2,129 @@ package DAOs.DocumentDatabaseDAOs;
 
 import beans.Order;
 import beans.Product;
+import beans.Review;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import utilities.Types;
 import utilities.Types.OrderState;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class OrderDAO {
 
-    public static HashMap<String, String> findOrdersByUserId(String id) {
-        //Method to enter to the database and find all the orders of the user (Key = id, Value = date)
+    //Method to enter to the database and find all the orders of the user (Key = id, Value = date)
+    public static HashMap<String, String> findOrdersByUserId(MongoDatabase database, String id) {
+
         HashMap<String, String> map = new HashMap<>();
-        map.put("oo1", new Date().toString());
-        map.put("oo2", new Date().toString());
-        map.put("oo3", new Date().toString());
-        map.put("oo4", new Date().toString());
-        map.put("oo5", new Date().toString());
-        map.put("oo6", new Date().toString());
+
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
+
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("user", id);
+        MongoCursor<Document> cursor = ordersColl.find(whereQuery).iterator();
+        if (cursor.hasNext()) {
+            Document d = cursor.next();
+
+            String pattern = "dd/MM/yyyy HH:mm:ss";
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+
+            map.put(d.getObjectId("_id").toString(), "Date: " + simpleDateFormat.format(d.getDate("date")) + "\nTotal amount: " + Math.round(d.getDouble("totalAmount") * 100.0) / 100.0 + "\nState: " + d.getString("state") + "\n");
+        }
 
         return map;
     }
 
-    public static Order findOrderById(String id) {
-        //Method to enter the database and find the order given the id
-        //MOCK
-        Product p1 = new Product("ab12", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
-        Product p2 = new Product("cd45", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
-        Product p3 = new Product("ef67", "stdProd", "stdbrand", "stdCat", null, 12.5, "std description", null, 4.0);
+    //Method to enter to the database and retrieve a specific order
+    public static Order findOrderById(MongoDatabase database, String id) {
+        Order o = null;
 
-        ArrayList<Product> productsList = new ArrayList<>();
-        productsList.add(p1);
-        productsList.add(p2);
-        productsList.add(p3);
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
 
-        Order o = new Order(productsList, 37.5, "pippo", OrderState.OPENED);
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("_id", new ObjectId(id));
+        MongoCursor<Document> cursor = ordersColl.find(whereQuery).iterator();
+        if (cursor.hasNext()) {
+            Document d = cursor.next();
+
+            HashMap<String, Integer> productsIDs = new HashMap<>();
+
+            List<Document> products = (List<Document>) d.get("products");
+            if (products != null) {
+                ListIterator<Document> iterator = products.listIterator();
+                while (iterator.hasNext()) {
+                    Document product = iterator.next();
+                    String prodID = product.getString("product");
+                    Integer quantity = product.getInteger("quantity");
+                    productsIDs.put(prodID, quantity);
+                }
+            }
+
+            String s = d.getString("state");
+            Types.OrderState state = null;
+            if (s.equals(OrderState.OPENED.toString())) {
+                state = OrderState.OPENED;
+            } else if (s.equals(OrderState.IN_TRANSIT.toString())) {
+                state = OrderState.IN_TRANSIT;
+            } else if (s.equals(OrderState.CLOSED.toString())) {
+                state = OrderState.CLOSED;
+            }
+
+            o = new Order(id, productsIDs, d.getDouble("totalAmount"), d.getString("user"), state);
+        }
 
         return o;
     }
 
-    public static void insertOrder(Order order) {
-        //Method to insert a new order (in MongoDB and Neo4J!!!)
-        //We have to set the date (real date of the order)
-        System.out.println("DONE.");
+    //Method to enter to the database and add a specific order
+    public static void insertOrder(MongoDatabase database, Order order) {
+
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
+
+        ArrayList<Document> products = new ArrayList<>();
+
+        HashMap<String, Integer> prods = order.getProducts();
+        for (String key : prods.keySet()) {
+            String prodID = key;
+            Integer quantity = prods.get(key);
+
+            Document d = new Document("product", prodID)
+                    .append("quantity", quantity);
+            products.add(d);
+        }
+
+        Document o = new Document("user", order.getUserId())
+                .append("products", products)
+                .append("totalAmount", order.getTotalAmount())
+                .append("date", order.getDate())
+                .append("state", OrderState.OPENED.toString());
+
+        ordersColl.insertOne(o);
+        System.out.println("DONE." + "\n");
     }
 
-    public static void deleteOrder(Order o) {
-        //Method to enter to the database and delete the product (MongoDB, Neo4J!!!)
-        System.out.println("DONE.");
+    //Method to enter to the database and delete a specific order
+    public static void deleteOrder(MongoDatabase database, String id) {
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("_id", new ObjectId(id));
+        ordersColl.deleteOne(whereQuery);
+        System.out.println("DONE." + "\n");
     }
 
-    public static void updateOrderState(Order o, OrderState s) {
-        //Method to enter to the database and set a new value for the quantity of the product
-        System.out.println("DONE.");
+    //Method to enter to the database and set a new value for the quantity of the product
+    public static void updateOrderState(MongoDatabase database, String id, String s) {
+
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
+
+        BasicDBObject searchQuery = new BasicDBObject("_id", new ObjectId(id));
+        BasicDBObject updateQuery = new BasicDBObject();
+        updateQuery.append("$set", new BasicDBObject().append("state", s));
+        ordersColl.updateOne(searchQuery, updateQuery);
+        System.out.println("DONE." + "\n");
     }
-
-
 }

@@ -1,6 +1,7 @@
 package beans;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class Product {
     private String id;
@@ -85,9 +86,6 @@ public class Product {
         this.rate = rate;
     }
 
-    public Product() {
-    }
-
     public Product(String id, String name, String brand, String mainCategory, ArrayList<String> categories, double price, String description, ArrayList<Review> reviewsList, double rate) {
         this.id = id;
         this.name = name;
@@ -100,7 +98,8 @@ public class Product {
         this.reviewsList = reviewsList;
     }
 
-    public Product(String name, String brand, String mainCategory, ArrayList<String> categories, double price, String description, ArrayList<Review> reviewsList) {
+    public Product(String id, String name, String brand, String mainCategory, ArrayList<String> categories, double price, String description, ArrayList<Review> reviewsList) {
+        this.id = id;
         this.name = name;
         this.brand = brand;
         this.mainCategory = mainCategory;
@@ -111,19 +110,41 @@ public class Product {
         this.reviewsList = reviewsList;
     }
 
+    public String printReviews() {
+        String result = "------------------------------------------\nReviews:\n";
+        Iterator<Review> iterator = reviewsList.iterator();
+        while (iterator.hasNext()) {
+            Review r = iterator.next();
+            result = result.concat("------------------------------------------\n" + r.toString() + "\n" + "------------------------------------------\n");
+        }
+        return result;
+    }
+
     @Override
     public String toString() {
-        String s = "Id: " + getId() + "\n" +
-                "Name: " + getName() + "\n" +
-                "Brand: " + getBrand() + "\n" +
-                "Main category: " + getMainCategory() + "\n" +
-                "Price: " + getPrice() + "\n" +
-                "Description: " + getDescription() + "\n" +
-                "Rate: " + getRate() + "\n";
+
+        String s = "Id: " + id + "\n" +
+                "Name: " + name + "\n" +
+                "Brand: " + brand + "\n" +
+                "Main category: " + mainCategory + "\n";
+
+        if (!categories.isEmpty()) {
+            s = s.concat("Other categories: " + categories + "\n");
+        }
+
+        s = s.concat("Price: " + price + "\n");
+
+        if (description != null) {
+            s = s.concat("Description: " + description + "\n");
+        }
+
+        s = s.concat("Rate: " + rate + "\n");
+
+        if (reviewsList.isEmpty()) {
+            s = s.concat("Reviews : no reviews for this product");
+        } else {
+            s = s.concat(printReviews());
+        }
         return s;
-
-        //sub categories
-        //reviews list
-
     }
 }

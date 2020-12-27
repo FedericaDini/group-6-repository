@@ -77,5 +77,4 @@ public class NikeAdidasDatasetPreprocess {
 
         connection.closeConnection();
     }
-
 }

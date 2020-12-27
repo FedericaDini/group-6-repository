@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import static utilities.Validation.takeMandatoryString;
+import static utilities.Validation.takePositiveInt;
+
 public class Client {
     private BufferedReader inKeyboard;
     private PrintWriter outVideo;
@@ -156,12 +159,15 @@ public class Client {
                             break;
                         case "q":
                             outVideo.println("Goodbye!");
-                            //Close connection to KV docDatabase
+
+                            //Close connection to KV database
                             kvDatabase.closeDB();
+
+                            //Close connection to document database
                             connection.closeConnection();
-                            //Close connection to document docDatabase
 
                             return;
+
                         default:
                             outVideo.println("WRONG INPUT");
                     }
@@ -172,7 +178,7 @@ public class Client {
             } else {
                 user = authenticate();
                 outVideo.println("Hello, " + user.getUsername());
-                if (user.getType() == UserType.CUSTOMER) {
+                if (user.getType() != UserType.EMPLOYEE) {
                     kvDatabase.openDB();
                 }
             }
@@ -340,32 +346,27 @@ public class Client {
     }
 
     private void addProduct() {
+        String id = null;
+        while (id == null) {
+            outVideo.println("Insert product code: ");
+            id = takeMandatoryString(inKeyboard, outVideo);
+            Product p = ProductDAO.findProductById(docDatabase, id);
+            if (p != null) {
+                id = null;
+                outVideo.println("This product already exists");
+            }
+        }
+
         outVideo.println("Insert name:");
-        String name = null;
-        try {
-            name = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String name = takeMandatoryString(inKeyboard, outVideo);
         outVideo.println("Insert brand:");
-        String brand = null;
-        try {
-            brand = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String brand = takeMandatoryString(inKeyboard, outVideo);
         outVideo.println("Insert main category:");
-        String mainCategory = null;
-        try {
-            mainCategory = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String mainCategory = takeMandatoryString(inKeyboard, outVideo);
 
         ArrayList<String> categories = new ArrayList<>();
-
         String cat = null;
-        outVideo.println("Insert the other categories: (when you have finished insert x)");
+        outVideo.println("Insert the other categories: (insert x to finish)");
         while (cat == null) {
             try {
                 cat = inKeyboard.readLine();
@@ -382,7 +383,7 @@ public class Client {
         double price = Validation.takeValidPrice(inKeyboard, outVideo);
 
 
-        outVideo.println("Insert the description:");
+        outVideo.println("Insert the description: (press enter to skip this field)");
         String description = null;
         try {
             description = inKeyboard.readLine();
@@ -391,7 +392,7 @@ public class Client {
             e.printStackTrace();
         }
 
-        Product product = new Product(name, brand, mainCategory, categories, price, description, null);
+        Product product = new Product(id, name, brand, mainCategory, categories, price, description, null);
         ProductDAO.insertProduct(docDatabase, product);
     }
 
@@ -526,20 +527,10 @@ public class Client {
 
     private void addReview(Product p, User u) {
         outVideo.println("Insert title:");
-        String title = null;
-        try {
-            title = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String title = takeMandatoryString(inKeyboard, outVideo);
 
         outVideo.println("Insert text:");
-        String text = null;
-        try {
-            text = inKeyboard.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String text = takeMandatoryString(inKeyboard, outVideo);
 
         Double rate = null;
         while (rate == null) {
@@ -584,7 +575,9 @@ public class Client {
     private void searchOrders(User u) {
 
         HashMap<String, String> ordersList;
+
         User emp = null;
+
         if (!(u.getType() == UserType.CUSTOMER)) {
             emp = u;
             u = null;
@@ -605,7 +598,7 @@ public class Client {
         }
 
         while (true) {
-            ordersList = OrderDAO.findOrdersByUserId(u.getUsername());
+            ordersList = OrderDAO.findOrdersByUserId(docDatabase, u.getUsername());
 
             if (emp != null) {
                 u = emp;
@@ -621,13 +614,24 @@ public class Client {
                 if (index != 0) {
                     //Id of the selected product
                     String id = retrieveIdFromIndex(ordersList, index);
+
                     //Retrieves the details of the selected product
-                    Order o = OrderDAO.findOrderById(id);
+                    Order o = OrderDAO.findOrderById(docDatabase, id);
 
                     //Prints the details of the selected product
                     outVideo.println(o);
 
+                    if (!o.getProducts().isEmpty()) {
+                        outVideo.println("Products: \n");
+
+                        HashMap<String, Integer> products = o.getProducts();
+                        for (String key : products.keySet()) {
+                            Product p = ProductDAO.findProductById(docDatabase, key);
+                            outVideo.println(p.getName() + "\n");
+                        }
+                    }
                     manageOrder(o, u);
+                    break;
                 } else {
                     break;
                 }
@@ -653,7 +657,8 @@ public class Client {
                 choice = inKeyboard.readLine();
 
                 if (choice.equals("d")) {
-                    OrderDAO.deleteOrder(o);
+                    OrderDAO.deleteOrder(docDatabase, o.getId());
+                    //We have to remove the PURCHASE relation in Neo4J!!!!
                 } else if (u.getType() == UserType.EMPLOYEE && choice.equals("u")) {
                     modifyState(o);
                 } else if (!choice.equals("b")) {
@@ -680,11 +685,11 @@ public class Client {
                 choice = inKeyboard.readLine();
 
                 if (choice.equals("o")) {
-                    OrderDAO.updateOrderState(o, OrderState.OPENED);
+                    OrderDAO.updateOrderState(docDatabase, o.getId(), OrderState.OPENED.toString());
                 } else if (choice.equals("t")) {
-                    OrderDAO.updateOrderState(o, OrderState.IN_TRANSIT);
+                    OrderDAO.updateOrderState(docDatabase, o.getId(), OrderState.IN_TRANSIT.toString());
                 } else if (!choice.equals("c")) {
-                    OrderDAO.updateOrderState(o, OrderState.CLOSED);
+                    OrderDAO.updateOrderState(docDatabase, o.getId(), OrderState.CLOSED.toString());
                 } else {
                     choice = null;
                     outVideo.println("WRONG INPUT");
@@ -704,10 +709,19 @@ public class Client {
         int limit = showResults(productsList);
 
         if (limit != 0) {
+            double totalAmount = 0.0;
+            for (String value : productsList.values()) {
+                String[] split = value.split(" --> ");
+                String[] split2 = split[1].split(" x ");
+                totalAmount = totalAmount + Double.parseDouble(split2[0]) * Integer.parseInt(split2[1]);
+            }
+            outVideo.println("Total Amount: " + Math.round(totalAmount * 100.0) / 100.0 + "\n");
+
             String choice = "";
             while (choice.equals("")) {
                 outVideo.println("What do you want to do now?");
                 outVideo.println("s --> See the details of a product");
+                outVideo.println("q --> Modify the quantity for a product");
                 outVideo.println("a --> Buy all");
                 outVideo.println("b --> Go back");
                 try {
@@ -715,9 +729,11 @@ public class Client {
 
                     if (choice.equals("s")) {
                         manageCart(limit, productsList, u);
-                        choice = "";
+
                     } else if (choice.equals("a")) {
                         purchaseCart(productsList, u);
+                    } else if (choice.equals("q")) {
+                        modifyQuantity(limit, productsList, u);
                     } else if (!choice.equals("b")) {
                         outVideo.println("WRONG INPUT");
                     }
@@ -731,19 +747,23 @@ public class Client {
 
     private void purchaseCart(HashMap<String, String> productsIds, User user) {
 
-        ArrayList<Product> productsList = new ArrayList<>();
+        HashMap<String, Integer> products = new HashMap<>();
         double totalAmount = 0.00;
+
         for (String key : productsIds.keySet()) {
 
-            Product p = ProductDAO.findProductById(docDatabase, key);
-            productsList.add(p);
+            String value = productsIds.get(key);
+            String[] split = value.split(" --> ");
+            String[] split2 = split[1].split(" x ");
 
-            //Compute the total price for the order
-            totalAmount = totalAmount + p.getPrice();
+            products.put(key, Integer.parseInt(split2[1]));
+
+            totalAmount = totalAmount + Double.parseDouble(split2[0]) * Integer.parseInt(split2[1]);
         }
 
-        Order order = new Order(productsList, totalAmount, user.getUsername(), OrderState.OPENED);
-        OrderDAO.insertOrder(order);
+        Order order = new Order(products, Math.round(totalAmount * 100.0) / 100.0, user.getUsername(), OrderState.OPENED);
+        OrderDAO.insertOrder(docDatabase, order);
+        //We have to add the PURCHASE relation inside Neo4J!!!
 
         //The purchased products are removed from the cart
         kvDatabase.removeUserFromCart(user.getUsername());
@@ -783,6 +803,22 @@ public class Client {
                         e.printStackTrace();
                     }
                 }
+            }
+        }
+    }
+
+    public void modifyQuantity(int limit, HashMap<String, String> productsList, User user) {
+        if (limit != 0) {
+            //Index of the selected product
+            int index = chooseElement(limit);
+
+            if (index != 0) {
+                //Index of the selected product
+                String id = retrieveIdFromIndex(productsList, index);
+
+                outVideo.println("How many items do you want to put into your cart?");
+                int q = takePositiveInt(inKeyboard, outVideo);
+                kvDatabase.updateQuantityOfProduct(id, user.getUsername(), q);
             }
         }
     }

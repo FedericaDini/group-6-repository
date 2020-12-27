@@ -8,6 +8,7 @@ import beans.Product;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
+import org.iq80.leveldb.WriteBatch;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,12 +19,10 @@ public class KVDatabaseDAO {
     private static DB db = null;
 
     public void openDB() {
-        Options options = new Options();
-        options.createIfMissing(true);
         try {
-            db = factory.open(new File("E-Shop-local-cart"), options);
-        } catch (IOException ioe) {
-            closeDB();
+            db = factory.open(new File("e-shop-cart"), new Options().createIfMissing(true));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -51,15 +50,13 @@ public class KVDatabaseDAO {
 
     public HashMap<String, String> getProductsByUsername(String username) {
 
-        DBIterator i = db.iterator();
-
         HashMap<String, String> l = new HashMap<>();
 
         String prodName = null;
         String prodPrice = null;
         String prodQuantity = null;
 
-        try {
+        try (DBIterator i = db.iterator()) {
 
             String actualProduct = null;
 
@@ -83,57 +80,83 @@ public class KVDatabaseDAO {
                     }
                     if (split[2].equals("quantity")) {
                         prodQuantity = asString(db.get(bytes(key)));
+                        l.put(actualProduct, prodName + " --> " + prodPrice + " x " + prodQuantity);
+                        actualProduct = null;
                     }
-                } else {
-                    l.put(actualProduct, prodName + " (" + prodPrice + " x " + prodQuantity + ")");
-                    actualProduct = split[1];
-                    prodName = asString(db.get(bytes(key)));
                 }
             }
-        } finally {
-            try {
-                i.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
         return l;
     }
 
     //Removes the product from the cart of a specific user
     public void removeProductFromCart(String product, String username) {
-        deleteValue(username + ":" + product + ":" + "name");
-        deleteValue(username + ":" + product + ":" + "quantity");
-        deleteValue(username + ":" + product + ":" + "price");
+
+        WriteBatch batch = db.createWriteBatch();
+        batch.delete(bytes(username + ":" + product + ":" + "name"));
+        batch.delete(bytes(username + ":" + product + ":" + "quantity"));
+        batch.delete(bytes(username + ":" + product + ":" + "price"));
+        db.write(batch);
+
+        System.out.println("DONE." + "\n");
+
+        try {
+            batch.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     //Removes the cart of the deleted user
     public void removeUserFromCart(String username) {
-        DBIterator i = db.iterator();
+        try (DBIterator i = db.iterator()) {
+            for (i.seek(bytes(username)); i.hasNext(); i.next()) {
+                String key = asString(i.peekNext().getKey());
+                String[] split = key.split(":");
 
-        for (i.seek(bytes(username)); i.hasNext(); i.next()) {
-            String key = asString(i.peekNext().getKey());
-            String[] split = key.split(":");
-
-            if (split[0].equals(username)) {
-                deleteValue(key);
-            } else {
-                break;
+                if (split[0].equals(username)) {
+                    deleteValue(key);
+                } else {
+                    break;
+                }
             }
+
+            i.close();
+
+            System.out.println("DONE." + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public void insertProductToCart(Product p, String username, int quantity) {
 
         String actualQuantity = getValue(username + ":" + p.getId() + ":" + "quantity");
-        if (actualQuantity.isEmpty()) {
-            putValue(username + ":" + p.getId() + ":" + "name", p.getName());
-            putValue(username + ":" + p.getId() + ":" + "price", String.valueOf(p.getPrice()));
-            putValue(username + ":" + p.getId() + ":" + "quantity", String.valueOf(quantity));
+        if (actualQuantity == null) {
+            WriteBatch batch = db.createWriteBatch();
+            batch.put(bytes(username + ":" + p.getId() + ":" + "name"), bytes(p.getName()));
+            batch.put(bytes(username + ":" + p.getId() + ":" + "price"), bytes(String.valueOf(p.getPrice())));
+            batch.put(bytes(username + ":" + p.getId() + ":" + "quantity"), bytes(String.valueOf(quantity)));
+            db.write(batch);
+            try {
+                batch.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             int q = Integer.parseInt(actualQuantity);
             q = q + quantity;
             putValue(username + ":" + p.getId() + ":" + "quantity", String.valueOf(q));
         }
+
+        System.out.println("DONE." + "\n");
+    }
+
+    public void updateQuantityOfProduct(String id, String username, int q) {
+        putValue(username + ":" + id + ":" + "quantity", String.valueOf(q));
+        System.out.println("DONE." + "\n");
+
     }
 }

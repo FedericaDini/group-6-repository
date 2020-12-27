@@ -69,10 +69,10 @@ public class UserDAO {
 
         Document u = new Document("username", user.getUsername())
                 .append("password", user.getPassword())
-                .append("type", user.getType());
+                .append("type", user.getType().toString());
 
         usersColl.insertOne(u);
-        System.out.println("DONE.");
+        System.out.println("DONE." + "\n");
     }
 
     //Delete the user from the database
@@ -82,6 +82,6 @@ public class UserDAO {
         BasicDBObject whereQuery = new BasicDBObject();
         whereQuery.put("username", username);
         usersColl.deleteOne(whereQuery);
-        System.out.println("DONE.");
+        System.out.println("DONE." + "\n");
     }
 }

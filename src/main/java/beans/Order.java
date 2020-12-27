@@ -1,14 +1,18 @@
 package beans;
 
+import DAOs.DocumentDatabaseDAOs.ProductDAO;
 import utilities.Types.OrderState;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class Order {
     private String id;
     private Date date;
-    private ArrayList<Product> products;
+    private HashMap<String, Integer> products;
     private Double totalAmount;
     private OrderState state;
     private String userId;
@@ -37,11 +41,11 @@ public class Order {
         this.date = date;
     }
 
-    public ArrayList<Product> getProducts() {
+    public HashMap<String, Integer> getProducts() {
         return products;
     }
 
-    public void setProducts(ArrayList<Product> products) {
+    public void setProducts(HashMap<String, Integer> products) {
         this.products = products;
     }
 
@@ -61,23 +65,38 @@ public class Order {
         this.state = state;
     }
 
-    public Order(ArrayList<Product> products, Double totalAmount, String userId, OrderState state) {
+    public Order(HashMap<String, Integer> products, Double totalAmount, String userId, OrderState state) {
         this.products = products;
         this.totalAmount = totalAmount;
         this.userId = userId;
+        this.state = state;
+        this.date = new Date();
+    }
+
+    public Order(String id, HashMap<String, Integer> products, Double totalAmount, String userId, OrderState state) {
+        this.id = id;
+        this.products = products;
+        this.totalAmount = totalAmount;
         this.userId = userId;
         this.state = state;
+        this.date = new Date();
     }
 
     @Override
     public String toString() {
-        String s = "Id: " + getId() + "\n" +
-                "Date: " + getDate() + "\n" +
-                "Total amount: " + getTotalAmount() + "\n" +
-                "State: " + getState() + "\n";
+        String pattern = "dd/MM/yyyy HH:mm:ss";
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+
+        String s = "Id: " + id + "\n" +
+                "Date: " + simpleDateFormat.format(date) + "\n" +
+                "Total amount: " + Math.round(totalAmount * 100.0) / 100.0 + "\n" +
+                "State: " + state + "\n" +
+                "Products:\n";
+
+        for (String key : products.keySet()) {
+            s = s.concat("productID: " + key + " (quantity: " + products.get(key) + ")\n");
+        }
+
         return s;
-
-        //products list
-
     }
 }

@@ -1,5 +1,6 @@
 package beans;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Review {
@@ -75,5 +76,33 @@ public class Review {
         this.prodId = prodId;
         this.userId = userId;
         this.date = new Date();
+    }
+
+    public Review(String title, String text, double rating, boolean doRecommend, String prodId, String userId, Date date) {
+        this.title = title;
+        this.text = text;
+        this.rating = rating;
+        this.doRecommend = doRecommend;
+        this.prodId = prodId;
+        this.userId = userId;
+        this.date = date;
+    }
+
+    @Override
+    public String toString() {
+        String pattern = "dd/MM/yyyy HH:mm:ss";
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+
+        String s = "Date: " + simpleDateFormat.format(date) + "\n";
+
+        if (userId != null) {
+            s = s.concat("User: " + userId + "\n");
+        }
+
+        s = s.concat("Title: " + getTitle() + "\n" +
+                "Text: " + text + "\n" +
+                "Rate: " + rating + "\n");
+
+        return s;
     }
 }

@@ -22,9 +22,9 @@ public class ReviewDAO {
         whereQuery.put("product", id);
         MongoCursor<Document> cursor = reviewsColl.find(whereQuery).iterator();
         while (cursor.hasNext()) {
-
             Document d = cursor.next();
-            Review r = new Review(d.getString("title"), d.getString("text"), d.getDouble("rate"), d.getBoolean("doRecommend"), d.getString(id), d.getString("username"));
+
+            Review r = new Review(d.getString("title"), d.getString("text"), d.getDouble("rate"), d.getBoolean("doRecommend"), d.getString(id), d.getString("username"), d.getDate("date"));
             reviewsList.add(r);
         }
         return reviewsList;
@@ -42,7 +42,7 @@ public class ReviewDAO {
         while (cursor.hasNext()) {
 
             Document d = cursor.next();
-            String id = d.getString("_id");
+            String id = d.getObjectId("_id").toString();
             reviewsList.add(id);
         }
         return reviewsList;
@@ -61,7 +61,7 @@ public class ReviewDAO {
         while (cursor.hasNext()) {
 
             Document d = cursor.next();
-            avg = avg + d.getLong("rate").doubleValue();
+            avg = avg + d.getDouble("rate");
             nReviews++;
         }
         return avg / nReviews;
@@ -72,15 +72,20 @@ public class ReviewDAO {
 
         MongoCollection<Document> reviewsColl = database.getCollection("reviews");
 
+
         Document r = new Document("date", review.getDate())
                 .append("product", review.getProdId())
                 .append("rate", review.getRating())
                 .append("text", review.getText())
                 .append("title", review.getTitle())
-                .append("user", review.getUserId());
+                .append("user", review.getUserId())
+                .append("doRecommend", review.isDoRecommend());
 
         reviewsColl.insertOne(r);
-        System.out.println("DONE.");
+
+        computeAvgReviewsRateByProductId(database, review.getProdId());
+
+        System.out.println("DONE." + "\n");
     }
 
     //Enter the database and delete all the reviews written by a specific user
@@ -101,6 +106,6 @@ public class ReviewDAO {
         whereQuery.put("_id", id);
         reviewColl.deleteOne(whereQuery);
 
-        System.out.println("DONE.");
+        System.out.println("DONE." + "\n");
     }
 }

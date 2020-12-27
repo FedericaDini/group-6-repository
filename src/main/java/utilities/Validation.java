@@ -25,7 +25,7 @@ public class Validation {
                 String number = inKeyboard.readLine();
                 n = Integer.parseInt(number);
 
-                if (n < 0) {
+                if (n <= 0) {
                     n = -1;
                     outVideo.println("Insert a non-negative number");
                 }
@@ -58,5 +58,23 @@ public class Validation {
         price = Math.round(price * 100.0) / 100.0;
 
         return price;
+    }
+
+    public static String takeMandatoryString(BufferedReader inKeyboard, PrintWriter outVideo) {
+        String field = null;
+        while (field == null) {
+            try {
+                field = inKeyboard.readLine();
+
+                if (field.equals("")) {
+                    field = null;
+                    outVideo.println("This field is mandatory, retry!");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return field;
     }
 }
