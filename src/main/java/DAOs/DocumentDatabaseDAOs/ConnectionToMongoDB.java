@@ -1,5 +1,6 @@
 package DAOs.DocumentDatabaseDAOs;
 
+import beans.Product;
 import com.mongodb.*;
 import com.mongodb.client.*;
 import com.mongodb.client.MongoClient;
@@ -44,9 +45,25 @@ public class ConnectionToMongoDB {
 
     }
 
-    public boolean isNewElement(MongoCollection<Document> collection, String id) {
+    public boolean isNewID(MongoCollection<Document> collection, String id) {
         BasicDBObject whereQuery = new BasicDBObject();
         whereQuery.put("_id", id);
+        MongoCursor<Document> cursor = collection.find(whereQuery).iterator();
+        if (cursor.hasNext()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public boolean isNewElement(MongoCollection<Document> collection, Product p) {
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("name", p.getName());
+        whereQuery.put("brand", p.getBrand());
+        whereQuery.put("mainCategory", p.getMainCategory());
+        whereQuery.put("price", p.getPrice());
+        whereQuery.put("description", p.getDescription());
+
         MongoCursor<Document> cursor = collection.find(whereQuery).iterator();
         if (cursor.hasNext()) {
             return false;
@@ -58,6 +75,4 @@ public class ConnectionToMongoDB {
     public void closeConnection() {
         mongo.close();
     }
-
-      //MongoCursor<String> it = collection.distinct("id", String.class).iterator();
 }

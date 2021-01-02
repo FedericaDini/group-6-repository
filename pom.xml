@@ -37,5 +37,10 @@
             <artifactId>leveldb</artifactId>
             <version>0.12</version>
         </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>4.2.0</version>
+        </dependency>
     </dependencies>
 </project>

@@ -1,7 +1,9 @@
 package utilities;
 
 import java.security.SecureRandom;
+import java.util.Date;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomGen {
     public static String generateRandomString(int length) {
@@ -26,4 +28,12 @@ public class RandomGen {
         price = Math.round(price * 100.0) / 100.0;
         return price;
     }
+
+    public static Date generateRandomDate(){
+        Date d1 = new Date("January 1, 2020, 00:00:00 GMT");
+        Date d2 = new Date("December 31, 2020, 00:00:00 GMT");
+        Date randomDate = new Date(ThreadLocalRandom.current().nextLong(d1.getTime(), d2.getTime()));
+        return randomDate;
+    }
+
 }

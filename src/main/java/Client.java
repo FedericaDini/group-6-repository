@@ -1,3 +1,4 @@
+import DAOs.GraphDatabaseDAO;
 import beans.*;
 import DAOs.DocumentDatabaseDAOs.*;
 import DAOs.KVDatabaseDAO;
@@ -86,10 +87,18 @@ public class Client {
                     outVideo.println("--- Suggested products ---");
 
                     //Computation of the list of suggested products
-                    suggestedProducts = ProductDAO.findSuggestedProductsByUsername(user.getUsername());
+                    //suggestedProducts = ProductDAO.findSuggestedProductsByUsername(user.getUsername());
+                    GraphDatabaseDAO g = new GraphDatabaseDAO();
+                    g.returnReccomended("AVpfpK8KLJeJML43BCuD", "Electronics");
+                    try {
+                        g.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
 
                     //View of all the results of the search
-                    limit = showResults(suggestedProducts);
+                    //limit = showResults(suggestedProducts);
                 }
 
                 try {
@@ -763,7 +772,20 @@ public class Client {
 
         Order order = new Order(products, Math.round(totalAmount * 100.0) / 100.0, user.getUsername(), OrderState.OPENED);
         OrderDAO.insertOrder(docDatabase, order);
-        //We have to add the PURCHASE relation inside Neo4J!!!
+
+        GraphDatabaseDAO g = new GraphDatabaseDAO();
+        g.insertPerson(user.getUsername());
+        for (String key : order.getProducts().keySet()) {
+
+            g.insertProduct(key, ProductDAO.findProductById(docDatabase, key).getMainCategory());
+            g.insertRelationship(user.getUsername(), key);
+        }
+
+        try {
+            g.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         //The purchased products are removed from the cart
         kvDatabase.removeUserFromCart(user.getUsername());

@@ -1,9 +1,11 @@
 package preprocessing;
 
 import DAOs.DocumentDatabaseDAOs.ConnectionToMongoDB;
-import DAOs.DocumentDatabaseDAOs.ReviewDAO;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Aggregates;
 import org.bson.Document;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -11,10 +13,7 @@ import org.json.simple.parser.JSONParser;
 import utilities.RandomGen;
 
 import java.io.FileReader;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.Arrays;
 
 public class VictoriasSecretDatasetPreprocess {
 
@@ -23,18 +22,15 @@ public class VictoriasSecretDatasetPreprocess {
     private static MongoDatabase database = null;
 
     @SuppressWarnings("unchecked")
-    public void retrieveFile() {
+    public void retrieveProductsFile(String path) {
 
         JSONParser parser = new JSONParser();
 
         Object rawFile;
         try {
-            rawFile = parser.parse(new FileReader("row-data-Victoriassecret.json"));
+            rawFile = parser.parse(new FileReader(path));
 
-            JSONObject results = (JSONObject) rawFile;
-
-
-            JSONArray rawData = (JSONArray) results.get("results");
+            JSONArray rawData = (JSONArray) rawFile;
             rawData.forEach(rawObj -> parseProductObject((JSONObject) rawObj));
 
         } catch (Exception exception) {
@@ -46,11 +42,11 @@ public class VictoriasSecretDatasetPreprocess {
     private static void parseProductObject(JSONObject rawProd) {
 
         //Retrieve the ID of the product
-        String id = (String) RandomGen.generateRandomString(10);
+        String id = RandomGen.generateRandomString(10);
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
-        boolean insert = connection.isNewElement(productsColl, id);
+        boolean insert = connection.isNewID(productsColl, id);
 
         if (insert) {
 
@@ -59,10 +55,11 @@ public class VictoriasSecretDatasetPreprocess {
             String brand = (String) rawProd.get("brand_name");
             String mainCategory = (String) rawProd.get("product_category");
             String price = (String) rawProd.get("price");
-            price = price.substring(1);
             String description = (String) rawProd.get("description");
-
-
+            String color = (String) rawProd.get("color");
+            if (color != null) {
+                name = name.concat(" - " + color);
+            }
 
             //create a cleared product
             Document product = new Document("_id", id)
@@ -79,18 +76,15 @@ public class VictoriasSecretDatasetPreprocess {
     }
 
     @SuppressWarnings("unchecked")
-    public void retrieveFile2() {
+    public void retrieveReviewsFile(String path) {
 
         JSONParser parser = new JSONParser();
 
         Object rawFile;
         try {
-            rawFile = parser.parse(new FileReader("row-data-Reviews-VS.json"));
+            rawFile = parser.parse(new FileReader(path));
 
-            JSONObject results = (JSONObject) rawFile;
-
-
-            JSONArray rawData = (JSONArray) results.get("results");
+            JSONArray rawData = (JSONArray) rawFile;
             rawData.forEach(rawObj -> parseReviewObject((JSONObject) rawObj));
 
         } catch (Exception exception) {
@@ -99,39 +93,49 @@ public class VictoriasSecretDatasetPreprocess {
     }
 
     private static void parseReviewObject(JSONObject rawRev) {
-
         MongoCollection<Document> reviewsColl = database.getCollection("reviews");
 
         //Retrieve the details of the review
-        String dateS = (String) rawRev.get("reviews.date");
+        Long recommended_ind = (Long) rawRev.get("Recommended IND");
+        Long rating = (Long) rawRev.get("Rating");
+        double rate = rating.doubleValue();
+        String text = (String) rawRev.get("Review Text");
+        String title = (String) rawRev.get("Title");
 
-        Date date = null;
-
-        try {
-            date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(dateS);
-        } catch (ParseException e) {
-            e.printStackTrace();
+        boolean doRecommend = false;
+        if (recommended_ind == 1) {
+            doRecommend = true;
         }
 
-        Boolean doRecommend = (Boolean) rawRev.get("reviews.doRecommend");
-        Long rating = (Long) rawRev.get("reviews.rating");
-        double rate = rating.doubleValue();
-        String text = (String) rawRev.get("reviews.text");
-        String title = (String) rawRev.get("reviews.title");
-        String user = (String) rawRev.get("reviews.username");
-        String product = (String) rawRev.get("id");
-
         //create a cleared review
-        Document review = new Document("date", date)
+        Document review = new Document("date", RandomGen.generateRandomDate())
                 .append("doRecommend", doRecommend)
                 .append("rate", rate)
                 .append("text", text)
                 .append("title", title)
-                .append("user", user)
-                .append("product", product);
+                .append("user", returnRandomUsername())
+                .append("product", returnRandomProductIdOfVS());
 
         //Insert the new object into MongoDB
         reviewsColl.insertOne(review);
+    }
+
+    public static String returnRandomUsername() {
+        MongoCollection<Document> usersColl = database.getCollection("users");
+        AggregateIterable<Document> iterable = usersColl.aggregate(Arrays.asList(Aggregates.sample(1)));
+        Document d = iterable.first();
+        String username = d.getString("username");
+        return username;
+    }
+
+    public static String returnRandomProductIdOfVS() {
+        MongoCollection<Document> productsColl = database.getCollection("products");
+        BasicDBObject match = new BasicDBObject("$match", new BasicDBObject("brand", new BasicDBObject("$eq", "Victoria's Secret")));
+        BasicDBObject sample = new BasicDBObject("$sample", new BasicDBObject("size", 1));
+        AggregateIterable<Document> iterable = productsColl.aggregate(Arrays.asList(match, sample));
+        Document d = iterable.first();
+        String prodId = d.getString("_id");
+        return prodId;
     }
 
 
@@ -143,9 +147,17 @@ public class VictoriasSecretDatasetPreprocess {
         database = connection.getMongoDatabase();
 
         VictoriasSecretDatasetPreprocess victoriasSecretDatasetPreprocess = new VictoriasSecretDatasetPreprocess();
-        victoriasSecretDatasetPreprocess.retrieveFile();
+        /*victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-Victoriassecret.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-CalvinKlein.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-HankyPanky.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-Amazon2.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-Nordstrom.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-Ae.json");
+        victoriasSecretDatasetPreprocess.retrieveProductsFile("raw-data-Btemptd.json");*/
 
-        connection.closeConnection();
+        victoriasSecretDatasetPreprocess.retrieveReviewsFile("raw-data-Reviews-VS.json");
+
+        victoriasSecretDatasetPreprocess.connection.closeConnection();
     }
 
 

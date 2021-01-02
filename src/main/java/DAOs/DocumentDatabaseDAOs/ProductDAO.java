@@ -61,18 +61,6 @@ public class ProductDAO {
         return p;
     }
 
-    public static HashMap<String, String> findSuggestedProductsByUsername(String username) {
-        //MOCK
-        HashMap<String, String> map = new HashMap<>();
-        map.put("oo1", "p1");
-        map.put("oo2", "p2");
-        map.put("oo3", "p3");
-        map.put("oo4", "p4");
-        map.put("oo5", "p5");
-        map.put("oo6", "p6");
-        return map;
-    }
-
     public static void insertProduct(MongoDatabase database, Product product) {
 
         MongoCollection<Document> productsColl = database.getCollection("products");

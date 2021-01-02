@@ -40,7 +40,7 @@ public class NikeAdidasDatasetPreprocess {
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
-        boolean insert = connection.isNewElement(productsColl, id);
+        boolean insert = connection.isNewID(productsColl, id);
 
         if (insert) {
 
@@ -72,8 +72,8 @@ public class NikeAdidasDatasetPreprocess {
         database = connection.getMongoDatabase();
 
         NikeAdidasDatasetPreprocess nikeAdidasDatasetPreprocess = new NikeAdidasDatasetPreprocess();
-        nikeAdidasDatasetPreprocess.retrieveFile("row-data-Nike.json");
-        nikeAdidasDatasetPreprocess.retrieveFile("row-data-Adidas.json");
+        nikeAdidasDatasetPreprocess.retrieveFile("raw-data-Nike.json");
+        nikeAdidasDatasetPreprocess.retrieveFile("raw-data-Adidas.json");
 
         connection.closeConnection();
     }

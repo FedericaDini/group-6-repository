@@ -5,7 +5,6 @@ import DAOs.DocumentDatabaseDAOs.ReviewDAO;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -16,6 +15,7 @@ import java.io.FileReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 
@@ -31,7 +31,7 @@ public class AmazonDatasetPreprocess {
 
         Object rawFile;
         try {
-            rawFile = parser.parse(new FileReader("row-data-Amazon.json"));
+            rawFile = parser.parse(new FileReader("raw-data-Amazon.json"));
 
             JSONArray rawData = (JSONArray) rawFile;
             rawData.forEach(rawObj ->
@@ -53,7 +53,7 @@ public class AmazonDatasetPreprocess {
 
         //Check if the product is already present in the database
         MongoCollection<Document> productsColl = database.getCollection("products");
-        boolean insert = connection.isNewElement(productsColl, id);
+        boolean insert = connection.isNewID(productsColl, id);
 
         if (insert) {
 
@@ -64,9 +64,7 @@ public class AmazonDatasetPreprocess {
             String mainCategory = (String) rawProd.get("primaryCategories");
 
             ArrayList<String> catsList = new ArrayList<>();
-            for (int i = 0; i < categories.length; i++) {
-                catsList.add(categories[i]);
-            }
+            catsList.addAll(Arrays.asList(categories));
 
             //create a cleared product
             Document product = new Document("_id", id)
@@ -125,7 +123,7 @@ public class AmazonDatasetPreprocess {
 
         //Check if the user is already present in the database
         MongoCollection<Document> usersColl = database.getCollection("users");
-        boolean insert = connection.isNewElement(usersColl, username);
+        boolean insert = connection.isNewID(usersColl, username);
 
         if (insert) {
 
@@ -148,6 +146,33 @@ public class AmazonDatasetPreprocess {
 
         AmazonDatasetPreprocess amazonDatasetPreprocess = new AmazonDatasetPreprocess();
         amazonDatasetPreprocess.retrieveFile();
+
+        Document admin = new Document("username", "admin")
+                .append("password", "admin")
+                .append("type", Types.UserType.ADMIN.toString());
+
+        Document employee1 = new Document("username", "emp1")
+                .append("password", "emp1")
+                .append("type", Types.UserType.EMPLOYEE.toString());
+        Document employee2 = new Document("username", "emp2")
+                .append("password", "emp2")
+                .append("type", Types.UserType.EMPLOYEE.toString());
+        Document employee3 = new Document("username", "emp3")
+                .append("password", "emp3")
+                .append("type", Types.UserType.EMPLOYEE.toString());
+
+        Document customer = new Document("username", "cust")
+                .append("password", "cust")
+                .append("type", Types.UserType.CUSTOMER.toString());
+
+
+        //Insert the new object into MongoDB
+        MongoCollection<Document> usersColl = database.getCollection("users");
+        usersColl.insertOne(admin);
+        usersColl.insertOne(employee1);
+        usersColl.insertOne(employee2);
+        usersColl.insertOne(employee3);
+        usersColl.insertOne(customer);
 
         connection.closeConnection();
     }
