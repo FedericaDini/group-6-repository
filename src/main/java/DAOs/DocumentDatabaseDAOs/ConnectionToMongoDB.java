@@ -1,25 +1,10 @@
 package DAOs.DocumentDatabaseDAOs;
 
-import beans.Product;
 import com.mongodb.*;
 import com.mongodb.client.*;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
-import com.mongodb.util.JSON;
-import org.bson.BsonArray;
 import org.bson.Document;
-import org.bson.conversions.Bson;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.function.Consumer;
 
 
 public class ConnectionToMongoDB {
@@ -40,36 +25,34 @@ public class ConnectionToMongoDB {
         // Accessing the database
         database = mongo.getDatabase("e-shop");
 
-        //Creating the index for the product search if not exists
-        database.getCollection("products").createIndex(Indexes.text( "name"));
+        //Creating the indexes if not exist
+        createIndexes();
 
+        //Set the configurations for the clustered database
+        setConfigurations();
     }
 
     public boolean isNewID(MongoCollection<Document> collection, String id) {
         BasicDBObject whereQuery = new BasicDBObject();
         whereQuery.put("_id", id);
         MongoCursor<Document> cursor = collection.find(whereQuery).iterator();
-        if (cursor.hasNext()) {
-            return false;
-        } else {
-            return true;
-        }
+        return !cursor.hasNext();
     }
 
-    public boolean isNewElement(MongoCollection<Document> collection, Product p) {
-        BasicDBObject whereQuery = new BasicDBObject();
-        whereQuery.put("name", p.getName());
-        whereQuery.put("brand", p.getBrand());
-        whereQuery.put("mainCategory", p.getMainCategory());
-        whereQuery.put("price", p.getPrice());
-        whereQuery.put("description", p.getDescription());
+    public void setConfigurations(){
 
-        MongoCursor<Document> cursor = collection.find(whereQuery).iterator();
-        if (cursor.hasNext()) {
-            return false;
-        } else {
-            return true;
-        }
+    }
+
+    public void createIndexes() {
+
+        //To speed up the product search by key words
+        database.getCollection("products").createIndex(Indexes.text("name"));
+
+        //To speed up the computation when searching a user by username
+        database.getCollection("users").createIndex(Indexes.ascending("username"));
+
+        //To speed up the computation when searching an order by username
+        database.getCollection("orders").createIndex(Indexes.ascending("user"));
     }
 
     public void closeConnection() {

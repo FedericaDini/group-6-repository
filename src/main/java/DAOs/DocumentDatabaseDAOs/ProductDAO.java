@@ -22,6 +22,7 @@ public class ProductDAO {
 
         MongoCollection<Document> productsColl = database.getCollection("products");
 
+        //Query using an index provided by MongoDB
         FindIterable<Document> cursor = productsColl.find(new BasicDBObject("$text", new BasicDBObject("$search", string)));
 
         for (Document d : cursor) {

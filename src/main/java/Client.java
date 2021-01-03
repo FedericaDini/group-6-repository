@@ -33,13 +33,13 @@ public class Client {
 
         //Open connection to MongoDB
         connection = new ConnectionToMongoDB();
-        connection.openConnection("mongodb://localhost:27017");
+        connection.openConnection("mongodb://172.16.3.145:27020,172.16.3.146:27020,172.16.3.102:27020/" + "retryWrites=true&w=2&wtimeout=10000&readPreference=primary");
 
-        // "mongodb://172.16.3.145:27017,172.16.3.146:27017,172.16.3.102:27017/" + "retryWrites=true&w=2&wtimeout=10000"
-        //Real execution of the application
+        //Locally: "mongodb://localhost:27017"
 
         docDatabase = connection.getMongoDatabase();
 
+        //Real execution of the application
         execute();
     }
 
@@ -87,18 +87,17 @@ public class Client {
                     outVideo.println("--- Suggested products ---");
 
                     //Computation of the list of suggested products
-                    //suggestedProducts = ProductDAO.findSuggestedProductsByUsername(user.getUsername());
                     GraphDatabaseDAO g = new GraphDatabaseDAO();
-                    g.returnReccomended("AVpfpK8KLJeJML43BCuD", "Electronics");
+                    suggestedProducts = g.returnRecommended(user.getUsername());
+
                     try {
                         g.close();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
 
-
                     //View of all the results of the search
-                    //limit = showResults(suggestedProducts);
+                    limit = showResults(suggestedProducts);
                 }
 
                 try {
@@ -607,7 +606,7 @@ public class Client {
         }
 
         while (true) {
-            ordersList = OrderDAO.findOrdersByUserId(docDatabase, u.getUsername());
+            ordersList = OrderDAO.findOrdersByUsername(docDatabase, u.getUsername());
 
             if (emp != null) {
                 u = emp;
@@ -777,15 +776,15 @@ public class Client {
         g.insertPerson(user.getUsername());
         for (String key : order.getProducts().keySet()) {
 
-            g.insertProduct(key, ProductDAO.findProductById(docDatabase, key).getMainCategory());
+            g.insertProduct(ProductDAO.findProductById(docDatabase, key).getName(), ProductDAO.findProductById(docDatabase, key).getMainCategory(), key);
             g.insertRelationship(user.getUsername(), key);
         }
 
-        try {
+        /*try {
             g.close();
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
 
         //The purchased products are removed from the cart
         kvDatabase.removeUserFromCart(user.getUsername());

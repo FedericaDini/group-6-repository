@@ -1,8 +1,6 @@
 package DAOs.DocumentDatabaseDAOs;
 
 import beans.Order;
-import beans.Product;
-import beans.Review;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -18,14 +16,14 @@ import java.util.*;
 public class OrderDAO {
 
     //Method to enter to the database and find all the orders of the user (Key = id, Value = date)
-    public static HashMap<String, String> findOrdersByUserId(MongoDatabase database, String id) {
+    public static HashMap<String, String> findOrdersByUsername(MongoDatabase database, String username) {
 
         HashMap<String, String> map = new HashMap<>();
 
         MongoCollection<Document> ordersColl = database.getCollection("orders");
 
         BasicDBObject whereQuery = new BasicDBObject();
-        whereQuery.put("user", id);
+        whereQuery.put("user", username);
         MongoCursor<Document> cursor = ordersColl.find(whereQuery).iterator();
         if (cursor.hasNext()) {
             Document d = cursor.next();
