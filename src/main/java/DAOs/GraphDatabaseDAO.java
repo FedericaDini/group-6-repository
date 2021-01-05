@@ -1,6 +1,9 @@
 package DAOs;
 
 import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,28 +13,17 @@ public class GraphDatabaseDAO {
 
     public GraphDatabaseDAO() {
         try {
-            driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "1234"));
+            //driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("", ""));
+            driver = GraphDatabase.driver("bolt://172.16.3.145:7687", AuthTokens.basic("neo4j", "superneo"));
             session = driver.session();
-            System.out.println("good");
         } catch (Exception e) {
             System.out.println("connection error");
         }
     }
 
-    public void close() throws Exception {
+    public void close() {
+        session.close();
         driver.close();
-    }
-
-    public void returnAll() {
-        Result result = null;
-        try {
-            result = session.run("MATCH (n) RETURN n.name");
-        } catch (Exception e) {
-            System.out.println("bad something");
-        }
-        while (result.hasNext()) {
-            System.out.println(result.next().get(0));
-        }
     }
 
     public HashMap<String, String> returnRecommended(String username) {
@@ -39,33 +31,54 @@ public class GraphDatabaseDAO {
         params.put("username", username);
         Result result = null;
         try {
-            result = session.run("MATCH(np:person{name:$username})-[*]->(npr:product) WITH collect(npr) as bought,npr.category as lcat match (np2:person)-[*]->(npr2:product) WHERE EXISTS {MATCH (np2)-[:have_purchased]->(npr3:product) where not np2.name=$username and npr3 in bought} and not npr2 in bought and npr2.category in lcat  RETURN npr2.name, npr2.idP", params);
+            result = session.run("MATCH(np:person{name:$username})-[*]->(npr:product) WITH collect(npr) as bought,npr.category as lcat match (np2:person)-[*]->(npr2:product) WHERE EXISTS {MATCH(np2)-[:have_purchased]->(npr3:product) where not np2.name=$username and npr3 in bought} and not npr2 in bought and npr2.category in lcat  RETURN npr2.idP,npr2.name limit 5", params);
         } catch (Exception e) {
             System.out.println("bad something");
         }
-
         HashMap<String, String> results = new HashMap<>();
-
         if (result != null) {
             while (result.hasNext()) {
-                results.put(result.next().get(0).asString(), result.next().get(1).asString());
+                Record record = result.next();
+                results.put(record.get(0).asString(), record.get(1).asString());
             }
         }
-
         return results;
     }
 
-    public void returnTopRated() {
+    public ArrayList<String> returnBestCategoryForMonth() {
+        ArrayList<String> list = new ArrayList<>();
         Result result = null;
         try {
-            result = session.run("MATCH (x)-[r]->(n:product) RETURN n, COUNT(r) ORDER BY COUNT(r) DESC LIMIT 1");
+            result = session.run("match (x)-[r]->(y) with collect(r.date.month) as month  MATCH (x)-[r]->(n:product) where r.date.month in month with r.date.year as rYear , r.date.month as rMonth , n.category as nCat , COUNT(r) as rSum order by count(r) desc  return rYear, rMonth , max(rSum), collect(nCat)[0]");
         } catch (Exception e) {
             System.out.println("bad something");
         }
         while (result.hasNext()) {
-            System.out.println(result.next().get(0));
+            Record r = result.next();
+            String s = r.get(1) + "/" + r.get(0) + " --> " + r.get(3) + " (" + r.get(2) + ")";
+            list.add(s);
         }
+
+        return list;
     }
+
+    public ArrayList<String> returnMeanForMonth() {
+        ArrayList<String> list = new ArrayList<>();
+        Result result = null;
+        try {
+            result = session.run("match (x)-[r]->(y) with collect(r.date.month) as month  MATCH (x)-[r]->(n:product) where r.date.month in month with r.date.year as rYear , r.date.month as rMonth , n.category as nCat , COUNT(r) as rSum return rYear , nCat, sum(rSum)*1.0 /12 order by rYear desc");
+        } catch (Exception e) {
+            System.out.println("bad something");
+        }
+        while (result.hasNext()) {
+            Record r = result.next();
+            Value mean = r.get(2);
+            String s = r.get(0) + " --> " + r.get(1) + " : " + Math.round(mean.asDouble() * 100.0) / 100.0 + " products purchased";
+            list.add(s);
+        }
+        return list;
+    }
+
 
     public void insertPerson(String personName) {
         Map<String, Object> params = new HashMap<>();
@@ -105,18 +118,18 @@ public class GraphDatabaseDAO {
         params.put("personName", personName);
         try {
             session.run("MATCH (n:person { name:$personName  }) DETACH DELETE n", params);
-            session.run("MATCH (n) WHERE NOT (n)--() RETURN n;", params);
+            session.run("MATCH (n) WHERE size((n)--())=0 DELETE (n)");
         } catch (Exception e) {
             System.out.println("bad something");
         }
     }
 
-    public void deleteProduct(String productName) {
+    public void deleteProduct(String id) {
         Map<String, Object> params = new HashMap<>();
-        params.put("productName", productName);
+        params.put("id", id);
         try {
-            session.run("MATCH (n:product { name: $productName }) DETACH DELETE n", params);
-            session.run("MATCH (n) WHERE NOT (n)--() RETURN n;", params);
+            session.run("MATCH (n:product { idP: $id }) DETACH DELETE n", params);
+            session.run("MATCH (n) WHERE size((n)--())=0 DELETE (n)");
         } catch (Exception e) {
             System.out.println("bad something");
         }

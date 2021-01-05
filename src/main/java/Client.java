@@ -60,6 +60,7 @@ public class Client {
                 if (user.getType() == UserType.ADMIN) {
                     outVideo.println("e --> Add a new employee");
                     outVideo.println("u --> Search users");
+                    outVideo.println("p --> See statistics about the platform");
                 }
                 if (user.getType() == UserType.EMPLOYEE || user.getType() == UserType.ADMIN) {
                     outVideo.println("a --> Add a new product");
@@ -83,8 +84,6 @@ public class Client {
                 HashMap<String, String> suggestedProducts = new HashMap<>();
 
                 if (user.getType() == UserType.CUSTOMER) {
-                    outVideo.println("The users that bought the same product as you, purchased also the products you can see below.");
-                    outVideo.println("--- Suggested products ---");
 
                     //Computation of the list of suggested products
                     GraphDatabaseDAO g = new GraphDatabaseDAO();
@@ -95,6 +94,9 @@ public class Client {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+
+                    outVideo.println("The users that bought the same product as you, purchased also the products you can see below.");
+                    outVideo.println("--- Suggested products ---");
 
                     //View of all the results of the search
                     limit = showResults(suggestedProducts);
@@ -108,6 +110,13 @@ public class Client {
                             if (user.getType() == UserType.ADMIN) {
                                 //The administrator can create only profiles for employees
                                 register(UserType.EMPLOYEE);
+                            } else {
+                                outVideo.println("WRONG INPUT");
+                            }
+                            break;
+                        case "p":
+                            if (user.getType() == UserType.ADMIN) {
+                                seeStatistics();
                             } else {
                                 outVideo.println("WRONG INPUT");
                             }
@@ -193,6 +202,31 @@ public class Client {
         }
     }
 
+    private void seeStatistics() {
+        GraphDatabaseDAO g = new GraphDatabaseDAO();
+        ArrayList<String> bestCategories = g.returnBestCategoryForMonth();
+        ArrayList<String> meanSold = g.returnMeanForMonth();
+
+        outVideo.println("Best categories per  month: ");
+
+        for (String bestCategory : bestCategories) {
+            outVideo.println(bestCategory);
+        }
+        outVideo.println();
+        outVideo.println("Most sold categories per year");
+
+        for (String s : meanSold) {
+            outVideo.println(s);
+        }
+
+        try {
+            g.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private User authenticate() {
         outVideo.println("Have you already been here? --> insert 1 to login");
         outVideo.println("Are you new? --> insert 2 to register");
@@ -210,7 +244,7 @@ public class Client {
                     if (action == 1) {
                         u = login();
                     } else if (action == 2) {
-                        //With the registration only CUSTOMERomer profiles can be created
+                        //With the registration only CUSTOMER profiles can be created
                         u = register(UserType.CUSTOMER);
                     } else {
                         authType = null;
@@ -342,7 +376,13 @@ public class Client {
                     UserDAO.deleteUser(docDatabase, username);
                     kvDatabase.removeUserFromCart(username);
                     ReviewDAO.deleteReviewsByUsername(docDatabase, username);
-                    //Remove orders and data in Neo4J!!!!
+                    GraphDatabaseDAO g = new GraphDatabaseDAO();
+                    g.deletePerson(username);
+                    try {
+                        g.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 } else if (!d.equalsIgnoreCase("n")) {
                     d = null;
                     outVideo.println("You can answer only y or n");
@@ -523,6 +563,13 @@ public class Client {
                     addReview(p, u);
                 } else if (u.getType() == UserType.EMPLOYEE && choice.equals("d")) {
                     ProductDAO.deleteProduct(docDatabase, p.getId());
+                    GraphDatabaseDAO g = new GraphDatabaseDAO();
+                    g.deleteProduct(p.getId());
+                    try {
+                        g.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 } else if (!choice.equals("b")) {
                     outVideo.println("WRONG INPUT");
                 }
@@ -639,13 +686,10 @@ public class Client {
                         }
                     }
                     manageOrder(o, u);
-                    break;
-                } else {
-                    break;
                 }
-            } else {
-                break;
             }
+
+            break;
         }
 
     }
@@ -775,16 +819,16 @@ public class Client {
         GraphDatabaseDAO g = new GraphDatabaseDAO();
         g.insertPerson(user.getUsername());
         for (String key : order.getProducts().keySet()) {
-
             g.insertProduct(ProductDAO.findProductById(docDatabase, key).getName(), ProductDAO.findProductById(docDatabase, key).getMainCategory(), key);
-            g.insertRelationship(user.getUsername(), key);
+            g.insertRelationship(user.getUsername(), ProductDAO.findProductById(docDatabase, key).getName());
         }
 
-        /*try {
+
+        try {
             g.close();
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
+        }
 
         //The purchased products are removed from the cart
         kvDatabase.removeUserFromCart(user.getUsername());

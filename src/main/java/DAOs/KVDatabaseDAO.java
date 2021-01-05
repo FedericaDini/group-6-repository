@@ -54,7 +54,7 @@ public class KVDatabaseDAO {
 
         String prodName = null;
         String prodPrice = null;
-        String prodQuantity = null;
+        String prodQuantity;
 
         try (DBIterator i = db.iterator()) {
 
