@@ -1,14 +1,19 @@
-package DAOs.DocumentDatabaseDAOs;
+package it.unipi.lsdb.DAOs.DocumentDatabaseDAOs;
 
-import beans.Order;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
+import it.unipi.lsdb.beans.Order;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import utilities.Types;
-import utilities.Types.OrderState;
+import it.unipi.lsdb.utilities.Types;
+import it.unipi.lsdb.utilities.Types.OrderState;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -53,9 +58,7 @@ public class OrderDAO {
 
             List<Document> products = (List<Document>) d.get("products");
             if (products != null) {
-                ListIterator<Document> iterator = products.listIterator();
-                while (iterator.hasNext()) {
-                    Document product = iterator.next();
+                for (Document product : products) {
                     String prodID = product.getString("product");
                     Integer quantity = product.getInteger("quantity");
                     productsIDs.put(prodID, quantity);
@@ -78,6 +81,18 @@ public class OrderDAO {
         return o;
     }
 
+    //Method to enter to the database and set a new value for the quantity of the product
+    public static void updateOrderState(MongoDatabase database, String id, String s) {
+
+        MongoCollection<Document> ordersColl = database.getCollection("orders");
+
+        BasicDBObject searchQuery = new BasicDBObject("_id", new ObjectId(id));
+        BasicDBObject updateQuery = new BasicDBObject();
+        updateQuery.append("$set", new BasicDBObject().append("state", s));
+        ordersColl.updateOne(searchQuery, updateQuery);
+        System.out.println("DONE." + "\n");
+    }
+
     //Method to enter to the database and add a specific order
     public static void insertOrder(MongoDatabase database, Order order) {
 
@@ -87,10 +102,9 @@ public class OrderDAO {
 
         HashMap<String, Integer> prods = order.getProducts();
         for (String key : prods.keySet()) {
-            String prodID = key;
             Integer quantity = prods.get(key);
 
-            Document d = new Document("product", prodID)
+            Document d = new Document("product", key)
                     .append("quantity", quantity);
             products.add(d);
         }
@@ -114,15 +128,25 @@ public class OrderDAO {
         System.out.println("DONE." + "\n");
     }
 
-    //Method to enter to the database and set a new value for the quantity of the product
-    public static void updateOrderState(MongoDatabase database, String id, String s) {
+    //Method to find the three users that spent the highest amount of data this year
+    public static LinkedHashMap<String, Double> findTopThreeUsersThisYear(MongoDatabase database) {
 
         MongoCollection<Document> ordersColl = database.getCollection("orders");
 
-        BasicDBObject searchQuery = new BasicDBObject("_id", new ObjectId(id));
-        BasicDBObject updateQuery = new BasicDBObject();
-        updateQuery.append("$set", new BasicDBObject().append("state", s));
-        ordersColl.updateOne(searchQuery, updateQuery);
-        System.out.println("DONE." + "\n");
+        Date date = new Date(new Date().getYear(), Calendar.JANUARY, 1);
+
+        LinkedHashMap<String, Double> result = new LinkedHashMap<>();
+
+        for (Document d : ordersColl.aggregate(
+                Arrays.asList(
+                        Aggregates.match(Filters.gte("date", date)),
+                        Aggregates.group("$user", Accumulators.sum("amount", "$totalAmount")),
+                        Aggregates.sort(Sorts.descending("amount")),
+                        Aggregates.limit(3)
+                )
+        )) {
+            result.put(d.getString("_id"), Math.round(d.getDouble("amount") * 100.0) / 100.0);
+        }
+        return result;
     }
 }

@@ -1,10 +1,12 @@
-import DAOs.GraphDatabaseDAO;
-import beans.*;
-import DAOs.DocumentDatabaseDAOs.*;
-import DAOs.KVDatabaseDAO;
+package it.unipi.lsdb;
+
+import it.unipi.lsdb.DAOs.GraphDatabaseDAO;
+import it.unipi.lsdb.beans.*;
+import it.unipi.lsdb.DAOs.DocumentDatabaseDAOs.*;
+import it.unipi.lsdb.DAOs.KVDatabaseDAO;
 import com.mongodb.client.MongoDatabase;
-import utilities.Types.*;
-import utilities.Validation;
+import it.unipi.lsdb.utilities.Types.*;
+import it.unipi.lsdb.utilities.Validation;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -12,8 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import static utilities.Validation.takeMandatoryString;
-import static utilities.Validation.takePositiveInt;
+import static it.unipi.lsdb.utilities.Validation.takeMandatoryString;
+import static it.unipi.lsdb.utilities.Validation.takePositiveInt;
 
 public class Client {
     private BufferedReader inKeyboard;
@@ -207,13 +209,13 @@ public class Client {
         ArrayList<String> bestCategories = g.returnBestCategoryForMonth();
         ArrayList<String> meanSold = g.returnMeanForMonth();
 
-        outVideo.println("Best categories per  month: ");
+        outVideo.println("Best category per month: ");
 
         for (String bestCategory : bestCategories) {
             outVideo.println(bestCategory);
         }
         outVideo.println();
-        outVideo.println("Most sold categories per year");
+        outVideo.println("Sold categories per year");
 
         for (String s : meanSold) {
             outVideo.println(s);
@@ -225,6 +227,35 @@ public class Client {
             e.printStackTrace();
         }
 
+        outVideo.println();
+        outVideo.println("Products with reviews above 500:");
+        HashMap<String, Integer> IDs = ReviewDAO.findMostRatedProductsIDs(docDatabase);
+
+        for (String key : IDs.keySet()) {
+            Product p = ProductDAO.findProductById(docDatabase, key);
+            outVideo.println(p.getId() + " - " + p.getName() + " -> " + IDs.get(key) + " reviews.");
+        }
+
+        outVideo.println();
+        outVideo.println("The three users that spent the higher amount of money this year:");
+        HashMap<String, Double> users = OrderDAO.findTopThreeUsersThisYear(docDatabase);
+
+        int i = 0;
+        for (String key : users.keySet()) {
+            i++;
+            outVideo.println(i + ") " + key + " - " + Math.round(users.get(key) * 100.0) / 100.0 + "$");
+        }
+
+        outVideo.println();
+        outVideo.println("Top 10 most recommended products:");
+        HashMap<String, Integer> ids = ReviewDAO.findMostRecommendedProducts(docDatabase);
+
+        int ii = 0;
+        for (String key : ids.keySet()) {
+            ii++;
+            Product p = ProductDAO.findProductById(docDatabase, key);
+            outVideo.println(ii + ") " + p.getId() + " - " + p.getName() + " -> " + ids.get(key) + " recommendations.");
+        }
     }
 
     private User authenticate() {

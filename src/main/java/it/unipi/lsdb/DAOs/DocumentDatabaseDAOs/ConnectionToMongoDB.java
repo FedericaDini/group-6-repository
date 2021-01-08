@@ -1,4 +1,4 @@
-package DAOs.DocumentDatabaseDAOs;
+package it.unipi.lsdb.DAOs.DocumentDatabaseDAOs;
 
 import com.mongodb.*;
 import com.mongodb.client.*;

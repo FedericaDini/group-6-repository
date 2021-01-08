@@ -1,4 +1,4 @@
-package utilities;
+package it.unipi.lsdb.utilities;
 
 public class Types {
     public enum UserType {

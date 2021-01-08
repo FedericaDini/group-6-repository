@@ -1,6 +1,6 @@
-package DAOs.DocumentDatabaseDAOs;
+package it.unipi.lsdb.DAOs.DocumentDatabaseDAOs;
 
-import beans.Product;
+import it.unipi.lsdb.beans.Product;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;

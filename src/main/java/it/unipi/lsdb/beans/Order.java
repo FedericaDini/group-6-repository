@@ -1,13 +1,10 @@
-package beans;
+package it.unipi.lsdb.beans;
 
-import DAOs.DocumentDatabaseDAOs.ProductDAO;
-import utilities.Types.OrderState;
+import it.unipi.lsdb.utilities.Types.OrderState;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 
 public class Order {
     private String id;

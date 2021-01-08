@@ -1,14 +1,22 @@
-package DAOs.DocumentDatabaseDAOs;
+package it.unipi.lsdb.DAOs.DocumentDatabaseDAOs;
 
-import beans.Review;
+import it.unipi.lsdb.beans.Review;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
+
+import static com.mongodb.client.model.Projections.fields;
+import static com.mongodb.client.model.Projections.include;
+import static com.mongodb.client.model.Sorts.*;
 
 public class ReviewDAO {
 
@@ -107,5 +115,43 @@ public class ReviewDAO {
         reviewColl.deleteOne(whereQuery);
 
         System.out.println("DONE." + "\n");
+    }
+
+    //Method to find the products that have more than 500 reviews (rates)
+    public static LinkedHashMap<String, Integer> findMostRatedProductsIDs(MongoDatabase database) {
+
+        LinkedHashMap<String, Integer> result = new LinkedHashMap<>();
+
+        MongoCollection<Document> reviewColl = database.getCollection("reviews");
+
+        Bson group = Aggregates.group("$product", Accumulators.sum("count", 1));
+        Bson match = Aggregates.match(Filters.gte("count", 500));
+        Bson sort = Aggregates.sort(descending("count"));
+
+        Iterator<Document> iterator = reviewColl.aggregate(Arrays.asList(group, match, sort)).iterator();
+        while (iterator.hasNext()) {
+            Document d = iterator.next();
+            result.put(d.getString("_id"), d.getInteger("count"));
+        }
+        return result;
+    }
+
+    //Method to find the ten products with the higher number of recommendations
+    public static LinkedHashMap<String, Integer> findMostRecommendedProducts(MongoDatabase database) {
+
+        MongoCollection<Document> reviewColl = database.getCollection("reviews");
+
+        LinkedHashMap<String, Integer> result = new LinkedHashMap<>();
+        Bson match = Aggregates.match(Filters.eq("doRecommend", true));
+        Bson group = Aggregates.group("$product", Accumulators.sum("count", 1));
+        Bson sort = Aggregates.sort(Sorts.descending("count"));
+        Bson limit = Aggregates.limit(10);
+
+        Iterator<Document> iterator = reviewColl.aggregate(Arrays.asList(match, group, sort, limit)).iterator();
+        while (iterator.hasNext()) {
+            Document d = iterator.next();
+            result.put(d.getString("_id"), d.getInteger("count"));
+        }
+        return result;
     }
 }

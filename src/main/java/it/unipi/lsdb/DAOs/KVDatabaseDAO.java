@@ -1,10 +1,10 @@
-package DAOs;
+package it.unipi.lsdb.DAOs;
 
 import static org.iq80.leveldb.impl.Iq80DBFactory.asString;
 import static org.iq80.leveldb.impl.Iq80DBFactory.bytes;
 import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
 
-import beans.Product;
+import it.unipi.lsdb.beans.Product;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;

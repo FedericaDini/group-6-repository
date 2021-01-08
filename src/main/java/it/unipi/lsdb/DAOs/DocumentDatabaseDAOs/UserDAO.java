@@ -1,14 +1,24 @@
-package DAOs.DocumentDatabaseDAOs;
+package it.unipi.lsdb.DAOs.DocumentDatabaseDAOs;
 
-import beans.User;
+import it.unipi.lsdb.beans.User;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
-import utilities.Types.UserType;
+import org.bson.conversions.Bson;
+import it.unipi.lsdb.utilities.Types.UserType;
 
-import java.util.ArrayList;
+import java.util.*;
+
+import static com.mongodb.client.model.Aggregates.project;
+import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.Sorts.ascending;
+import static com.mongodb.client.model.Sorts.descending;
 
 public class UserDAO {
 

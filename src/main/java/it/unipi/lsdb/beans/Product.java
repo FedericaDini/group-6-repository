@@ -1,4 +1,4 @@
-package beans;
+package it.unipi.lsdb.beans;
 
 import java.util.ArrayList;
 import java.util.Iterator;

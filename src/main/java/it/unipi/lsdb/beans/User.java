@@ -1,6 +1,6 @@
-package beans;
+package it.unipi.lsdb.beans;
 
-import utilities.Types.UserType;
+import it.unipi.lsdb.utilities.Types.UserType;
 
 public class User {
     private String username;

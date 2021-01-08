@@ -1,4 +1,4 @@
-package beans;
+package it.unipi.lsdb.beans;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

@@ -1,4 +1,4 @@
-package DAOs;
+package it.unipi.lsdb.DAOs;
 
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
@@ -13,12 +13,14 @@ public class GraphDatabaseDAO {
 
     public GraphDatabaseDAO() {
         try {
-            //driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("", ""));
+            //driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic("neo4j", "superneo1234"));
             driver = GraphDatabase.driver("bolt://172.16.3.145:7687", AuthTokens.basic("neo4j", "superneo"));
             session = driver.session();
         } catch (Exception e) {
             System.out.println("connection error");
         }
+
+        //session.run("CREATE INDEX ON:person(name)");
     }
 
     public void close() {
@@ -31,7 +33,7 @@ public class GraphDatabaseDAO {
         params.put("username", username);
         Result result = null;
         try {
-            result = session.run("MATCH(np:person{name:$username})-[*]->(npr:product) WITH collect(npr) as bought,npr.category as lcat match (np2:person)-[*]->(npr2:product) WHERE EXISTS {MATCH(np2)-[:have_purchased]->(npr3:product) where not np2.name=$username and npr3 in bought} and not npr2 in bought and npr2.category in lcat  RETURN npr2.idP,npr2.name limit 5", params);
+            result = session.run("MATCH(np:person{name:$username})-[*]->(npr:product) WITH collect(npr) as bought,npr.category as lcat match (np2:person)-[*]->(npr2:product) WHERE EXISTS {MATCH(np2)-[:has_purchased]->(npr3:product) where not np2.name=$username and npr3 in bought} and not npr2 in bought and npr2.category in lcat  RETURN npr2.idP,npr2.name limit 5", params);
         } catch (Exception e) {
             System.out.println("bad something");
         }
@@ -107,7 +109,7 @@ public class GraphDatabaseDAO {
         params.put("personName", personName);
         params.put("productName", productName);
         try {
-            session.run("MATCH (n:person),(np:product) WHERE n.name=$personName and np.name=$productName  CREATE ((n)-[r:have_purchased{date: date()}]->(np))", params);
+            session.run("MATCH (n:person),(np:product) WHERE n.name=$personName and np.name=$productName  CREATE ((n)-[r:has_purchased{date: date()}]->(np))", params);
         } catch (Exception e) {
             System.out.println("bad something");
         }

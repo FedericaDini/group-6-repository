@@ -1,4 +1,4 @@
-package utilities;
+package it.unipi.lsdb.utilities;
 
 import java.io.BufferedReader;
 import java.io.IOException;
